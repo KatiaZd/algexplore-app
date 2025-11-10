@@ -1,0 +1,20 @@
+<div
+  class="card"
+  role="button"
+  tabindex="0"
+  (click)="goToDetail()"
+  (keyup.enter)="goToDetail()"
+  (keyup.space)="goToDetail()"
+  [attr.aria-label]="'Voir le détail du lieu ' + lieu.nom"
+
+>
+  <img
+    src="https://via.placeholder.com/300x200"
+    alt="{{ lieu.nom }}"
+  />
+  <div class="card-content">
+    <span class="badge">Alger des enfants</span>
+    <h3>{{ lieu.nom }}</h3>
+    <p>{{ lieu.description }}</p>
+  </div>
+</div>

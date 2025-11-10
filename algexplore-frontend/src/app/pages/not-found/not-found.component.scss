@@ -1,0 +1,40 @@
+@use '../../../styles/variables' as *;
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 70dvh;
+  padding: 2rem 1rem;
+
+  h1 {
+    font-size: clamp(1.8rem, 1.3rem + 1vw, 2rem);
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    margin-bottom: 1.25rem;
+    font-size: 1rem;
+  }
+
+  .button-cta {
+    @include button-cta;
+    &:hover {
+      filter: brightness(1.05);
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+      filter: brightness(0.95);
+    }
+
+    &:focus-visible {
+      outline: 2px solid lighten($kaki, 35%);
+      outline-offset: 3px;
+    }
+  }
+}

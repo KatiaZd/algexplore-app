@@ -1,0 +1,47 @@
+<section class="lieu-page">
+  <header class="page-head">
+    <h1>Algexplore : un portail culturel pour explorer Alger avec authenticité, curiosité et envie de partage</h1>
+    <h2 class="subtitle">
+      Découvrez les lieux culturels, événements et bonnes adresses qui font rayonner Alger, pour des sorties riches de sens et de découvertes
+    </h2>
+  </header>
+
+  <!-- Chargement -->
+  <div *ngIf="isLoading" class="state">Chargement...</div>
+
+  <!-- Erreur -->
+  <div *ngIf="hasError && !isLoading" class="state error">
+    Impossible de charger les lieux. Vérifie si l'API tourne.
+  </div>
+
+  <!-- Contenu -->
+  <div *ngIf="!isLoading && !hasError">
+
+    <!-- Aucun lieu -->
+    <div *ngIf="lieux.length === 0" class="state">
+      Aucun lieu disponible pour le moment.
+    </div>
+
+    <!-- Liste des lieux -->
+    <div class="cards" *ngIf="lieux.length > 0">
+      <article class="card" *ngFor="let lieu of lieux">
+        <div class="card-header">
+          <h2 class="lieu-nom">{{ lieu.nom }}</h2>
+          <span class="lieu-adresse">{{ lieu.adresse }}</span>
+        </div>
+
+        <p class="lieu-desc">{{ lieu.description }}</p>
+
+        <div class="lieu-meta">
+          <div *ngIf="lieu.prixAdulte" class="badge">
+            Adulte : {{ lieu.prixAdulte }}
+          </div>
+          <div *ngIf="lieu.prixEnfant" class="badge">
+            Enfant : {{ lieu.prixEnfant }}
+          </div>
+        </div>
+      </article>
+    </div>
+
+  </div>
+</section>

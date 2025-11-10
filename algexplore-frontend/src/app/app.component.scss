@@ -1,0 +1,130 @@
+@use '../styles/variables' as *;
+
+/* -- HEADER -- */
+
+header {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 15px;
+  padding-right: 15px;
+
+  .logo img {
+    height: clamp(10px, 4vw, 32px);
+    width: auto;
+    display: block;
+  }
+
+  .icons {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    margin-right: 15px;
+    cursor: pointer;
+    line-height: 1;
+    img {
+      height: clamp(14px, 4vw, 28px);
+      width: auto;
+    }
+  }
+}
+
+/* Header Destkop */
+
+@media screen and (min-width: $bp-desktop) {
+  header {
+    height: 80px;
+
+    .logo img {
+      height: clamp(24px, 2vw, 40px);
+      margin-left: 32px;
+    }
+  }
+}
+
+/* -- FOOTER -- */
+
+.footer {
+  text-align: center;
+  padding: 24px 16px 32px;
+  border-top: 1px solid $kaki;
+}
+
+.footer__logo {
+  cursor: pointer;
+}
+img {
+  height: 28px;
+}
+
+.footer__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0px;
+
+  a {
+    font-size: 16px;
+    color: $black;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.footer__social {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 33px 33px;
+}
+
+.footer__copy {
+  font-size: 13px;
+  color: $kaki;
+}
+
+/* Footer Desktop */
+
+@media (min-width: $bp-desktop) {
+  .footer {
+    padding: 32px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    text-align: center;
+    // row-gap: 10px;
+  }
+
+  .footer__logo {
+    justify-self: start;
+  }
+
+  .footer__nav {
+    flex-direction: row;
+    gap: 32px;
+    justify-self: center;
+    margin: 0;
+  }
+
+  .footer__social {
+    justify-self: end;
+    gap: 14px;
+    margin: 0;
+  }
+
+  .footer__copy {
+    grid-column: 1 / -1;
+    justify-self: center;
+    margin-top: 8px;
+  }
+}

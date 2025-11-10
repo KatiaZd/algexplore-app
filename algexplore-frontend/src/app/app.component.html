@@ -1,0 +1,52 @@
+<header class="header">
+  <div class="logo">
+    <a routerLink="/">
+    <img src="../assets/logo/logo-algexplore.svg" alt="Logo du site AlgExplore" />
+    </a>
+  </div>
+
+  <div class="icons">
+    <button class="icon-btn" aria-label="Favoris"> 
+      <img src="../assets/icons/favoris.svg" alt="Icône de favoris" />
+    </button>
+    <button class="icon-btn" aria-label="Compte utilisateur"> 
+      <img src="../assets/icons/user-account.svg" alt="Icône de compte utilisateur" />
+    </button>
+  </div>
+</header>
+
+<main class="site-main">
+  <router-outlet></router-outlet>
+</main>
+
+<footer class="footer">
+  <div class="footer__logo">
+    <a routerLink="/">
+      <img src="assets/logo/logo-algexplore.svg" alt="AlgExplore" />
+    </a>
+  </div>
+
+  <!-- Liens -->
+  <nav class="footer__nav" aria-label="Liens de pied de page">
+    <a routerLink="/">Accueil</a>
+    <a routerLink="/mentions-legales">Mentions légales</a>
+    <a routerLink="/politique-de-confidentialite">Politique de confidentialité</a>
+    <a routerLink="/contact">Contact</a>
+  </nav>
+
+  <!-- Réseaux sociaux -->
+  <div class="footer__social" aria-label="Réseaux sociaux">
+    <a class="social" href="https://www.youtube.com/" aria-label="YouTube">
+      <img src="assets/icons/youtube.svg" alt="lien youtube" />
+    </a>
+    <a class="social" href="https://www.tiktok.com/fr/" aria-label="TikTok">
+      <img src="assets/icons/tiktok.svg" alt="lien tiktok" />
+    </a>
+    <a class="social" href="https://www.instagram.com/" aria-label="Instagram">
+      <img src="assets/icons/instagram.svg" alt="lien instagram" />
+    </a>
+  </div>
+
+  <!-- Copyright -->
+  <p class="footer__copy">© 2025-2026 Algexplore par Katia ZOUAD</p>
+</footer>

@@ -1,0 +1,16 @@
+<div class="section">
+  <div class="header">
+    <h2>{{ title }}</h2>
+    <div class="arrows">
+      <button (click)="scrollLeft(carousel)">‹</button>
+      <button (click)="scrollRight(carousel)">›</button>
+    </div>
+  </div>
+
+  <div class="carousel" #carousel>
+    <app-lieu-card
+      *ngFor="let lieu of lieux"
+      [lieu]="lieu">
+    </app-lieu-card>
+  </div>
+</div>

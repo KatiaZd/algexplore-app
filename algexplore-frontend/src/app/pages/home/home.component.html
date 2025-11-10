@@ -1,0 +1,29 @@
+<section class="hero">
+  <h1>AlgExplore : un portail culturel pour explorer Alger avec authenticité, curiosité et envie de partage</h1>
+  <p class="subtitle">
+    Découvrez les lieux culturels, événements et bonnes adresses qui font rayonner Alger, pour des sorties riches de sens et de découvertes.
+  </p>
+
+  <div class="search-bar">
+    <input type="text" placeholder="Rechercher un lieu, un événement..." />
+    <button>🔍</button>
+  </div>
+
+  <div class="tags">
+    <span class="tag">Famille</span>
+    <span class="tag">Bon plan</span>
+    <span class="tag">Tourisme</span>
+    <span class="tag">Patrimoine</span>
+  </div>
+</section>
+
+<section *ngIf="isLoading">Chargement...</section>
+<section *ngIf="hasError && !isLoading">Erreur de chargement des lieux</section>
+
+<section *ngIf="!isLoading && !hasError">
+  <app-section-carousel
+    *ngFor="let section of sections"
+    [title]="section.title"
+    [lieux]="section.lieux">
+  </app-section-carousel>
+</section>

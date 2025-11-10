@@ -1,0 +1,46 @@
+<section class="lieu-detail-page" *ngIf="isLoading">
+  <p>Chargement...</p>
+</section>
+
+<section class="lieu-detail-page error" *ngIf="hasError && !isLoading">
+  <p>Impossible de charger ce lieu.</p>
+  <button (click)="goBack()">Retour</button>
+</section>
+
+<section class="lieu-detail-page" *ngIf="!isLoading && !hasError && lieu">
+
+  <button class="back-btn" (click)="goBack()">← Retour</button>
+
+  <header class="header">
+    <h1 class="lieu-nom">{{ lieu.nom }}</h1>
+    <p class="lieu-adresse">{{ lieu.adresse }}</p>
+  </header>
+
+  <article class="content">
+    <section class="description">
+      <h2>Description</h2>
+      <p>{{ lieu.description }}</p>
+    </section>
+
+    <section class="tarifs" *ngIf="lieu.prixAdulte || lieu.prixEnfant">
+      <h2>Tarifs</h2>
+      <ul>
+        <li *ngIf="lieu.prixAdulte">
+          <strong>Adulte :</strong> {{ lieu.prixAdulte }}
+        </li>
+        <li *ngIf="lieu.prixEnfant">
+          <strong>Enfant :</strong> {{ lieu.prixEnfant }}
+        </li>
+      </ul>
+    </section>
+
+    <section class="infos">
+      <h2>Informations pratiques</h2>
+      <ul>
+        <li><strong>Adresse :</strong> {{ lieu.adresse }}</li>
+        <li><strong>ID interne :</strong> {{ lieu.id }}</li>
+        <li><strong>Créé le :</strong> {{ lieu.dateCreation | date:'short' }}</li>
+      </ul>
+    </section>
+  </article>
+</section>
