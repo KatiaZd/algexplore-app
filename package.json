@@ -1,0 +1,22 @@
+{
+  "name": "algexplore-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monorepo AlgExplore (Angular + Express/Prisma)",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:back\" \"npm run dev:front\"",
+    "dev:back": "npm run dev --prefix algexplore-backend",
+    "dev:front": "npm start --prefix algexplore-frontend",
+    "build": "npm run build:back && npm run build:front",
+    "build:back": "npm run build --prefix algexplore-backend",
+    "build:front": "npm run build --prefix algexplore-frontend",
+    "lint": "npm run lint --prefix algexplore-frontend",
+    "test": "npm run test --prefix algexplore-backend && npm run test --prefix algexplore-frontend"
+  },
+  "keywords": [],
+  "author": "Katia Zouad",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
