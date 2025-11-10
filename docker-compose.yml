@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15          
+    container_name: algexplore_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-algexplore}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-algexplore}
+      POSTGRES_DB: ${POSTGRES_DB:-algexplore}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"   # 5433 côté hôte -> 5432 dans le conteneur
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-algexplore} -d ${POSTGRES_DB:-algexplore}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer
+    container_name: algexplore_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  backend:
+    build:
+      context: .
+      dockerfile: algexplore-backend/Dockerfile
+    container_name: algexplore_backend
+    env_file:
+      - algexplore-backend/.env
+    environment:
+      NODE_ENV: development
+      # forcer depuis compose (facultatif) :
+      # DATABASE_URL: postgresql://algexplore:algexplore@db:5432/algexplore?schema=public
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./algexplore-backend:/usr/src/app
+      - /usr/src/app/node_modules
+
+  frontend:
+    build:
+      context: .
+      dockerfile: algexplore-frontend/Dockerfile
+    container_name: algexplore_frontend
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "4200:4200"
+    depends_on:
+      - backend
+    volumes:
+      - ./algexplore-frontend:/usr/src/app
+      - /usr/src/app/node_modules
+
+volumes:
+  db_data:
