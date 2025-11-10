@@ -1,0 +1,4 @@
+echo "* text=auto eol=lf" > .gitattributes
+git add .gitattributes
+git commit -m "chore: add .gitattributes for consistent line endings"
+git push
