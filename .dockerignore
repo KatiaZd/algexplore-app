@@ -1,0 +1,20 @@
+# Node / builds
+node_modules
+dist
+build
+.tmp
+.cache
+coverage
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode
+.idea
