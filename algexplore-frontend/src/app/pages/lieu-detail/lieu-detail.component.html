@@ -8,145 +8,157 @@
 </section>
 
 <article *ngIf="lieu as l">
-
-<!-- HEADER -->
+  <!-- HEADER -->
   <header class="hero">
     <img [src]="l.coverUrl" [alt]="l.nom" />
 
     <div class="hero-text">
       <!-- Catégorie du lieux -->
-       <h1>{{ l.nom }}</h1>
-       <!-- Date de l'event -->
-        
-    <!-- Icon favori et partager -->
+      <h1>{{ l.nom }}</h1>
+      <!-- Date de l'event -->
 
-    <div class="hero-actions" >
-      <button class="icon-btn" aria-label="Ajouter aux favoris">♡</button>
-      <button class="icon-btn" aria-label="Partager">⤴</button>
-    </div>
+      <!-- Icon favori et partager -->
+      <div class="hero-actions">
+        <button class="icon-btn" aria-label="Ajouter aux favoris">
+          <img src="assets/icons/favoris.svg" alt="Icône favoris" />
+        </button>
+
+        <button class="icon-btn" aria-label="Partager">
+          <img src="assets/icons/send.svg" alt="Icône partager" />
+        </button>
+      </div>
     </div>
   </header>
 
-<!-- DESCRIPTION -->
-<section class="lieu-body" *ngIf="lieu as l">
-
-  <div class="lieu-body__layout">
-    <section class="lieu-body__text">
-      <p class="paragraph">{{ l.description }}</p>
-      <button> Enregistrer </button>
-    </section>
-
-    
-
-    <!-- COLONNE INFOS (aside) -->
-    <article class="lieu-body__aside">
-      <h2>{{ l.nom }}</h2>
-
-      <!-- ADRESSE -->
-      <div>
-        <span>📍</span>
-        <p>{{ l.adresse }}</p>
-      </div>
-
-        <hr>
-
-      <!-- DATES -->
-<!-- DATES -->
-<section>
-  <div>
-    <span>📅</span>
-
-    <!-- Lieu permanent -->
-    <p *ngIf="l.isPermanent">
-      Permanent
-    </p>
-
-    <!-- Lieu avec dates -->
-    <p *ngIf="!l.isPermanent && l.dateDebut && l.dateFin">
-      Du {{ l.dateDebut | date:'longDate' }}
-      au {{ l.dateFin | date:'longDate' }}
-    </p>
-
-    <!-- Cas de sécurité : une seule date -->
-    <p *ngIf="!l.isPermanent && l.dateDebut && !l.dateFin">
-      À partir du {{ l.dateDebut | date:'longDate' }}
-    </p>
-
-    <p *ngIf="!l.isPermanent && !l.dateDebut && l.dateFin">
-      Jusqu'au {{ l.dateFin | date:'longDate' }}
-    </p>
-  </div>
-</section>
-
-
-      <hr>
-
-      <!-- PRIX -->
-      <section>
-        <div>
-          <span>💰</span>
-          <p>Billet adulte : {{ l.prixAdulte }}</p>
-          <p>Billet enfant : {{ l.prixEnfant }}</p>
-        </div>
+  <!-- DESCRIPTION -->
+  <section class="lieu-body" *ngIf="lieu as l">
+    <div class="lieu-body__layout">
+      <section class="lieu-body__text">
+        <p class="paragraph">{{ l.description }}</p>
+        <button>Enregistrer</button>
       </section>
 
-      <hr>
+      <!-- COLONNE INFOS (aside) -->
+      <article class="lieu-body__aside">
+        <h2>{{ l.nom }}</h2>
 
-      <!-- CARTE -->
-      <div class="map" *ngIf="lieu.latitude && lieu.longitude">
-        <iframe
-          [src]="safeMapUrl"
-          width="100%" height="180" style="border:0;" loading="lazy"
-          referrerpolicy="no-referrer-when-downgrade">
-        </iframe>
-      </div> 
-
-      <!-- COMMENT Y ALLER -->
-      <section *ngIf="l.infosAcces || l.stationBus">
+        <!-- ADRESSE -->
         <div>
-          <span>🚌</span>
-          <p>
-            <ng-container *ngIf="l.stationBus">Bus : {{ l.stationBus }}. </ng-container>
-            {{ l.infosAcces }}
-          </p>
+          <img src="assets/icons/location.svg" alt="" class="info-icon" />
+          <p>{{ l.adresse }}</p>
         </div>
-      </section>
 
-      <hr>
+        <hr />
 
-      <!-- PUBLIC -->
-      <section>
-        <div>
-          <span>👥</span>
-          <h3>Tout public</h3>
+        <!-- DATES -->
+        <section>
+          <div>
+            <img src="assets/icons/calendrier.svg" alt="" class="info-icon" />
+
+            <!-- Lieu permanent -->
+            <p *ngIf="l.isPermanent">Permanent</p>
+
+            <!-- Lieu avec dates -->
+            <p *ngIf="!l.isPermanent && l.dateDebut && l.dateFin">
+              Du {{ l.dateDebut | date: 'longDate' }} au {{ l.dateFin | date: 'longDate' }}
+            </p>
+
+            <!-- Cas de sécurité : une seule date -->
+            <p *ngIf="!l.isPermanent && l.dateDebut && !l.dateFin">
+              À partir du {{ l.dateDebut | date: 'longDate' }}
+            </p>
+
+            <p *ngIf="!l.isPermanent && !l.dateDebut && l.dateFin">
+              Jusqu'au {{ l.dateFin | date: 'longDate' }}
+            </p>
+          </div>
+        </section>
+
+        <hr />
+
+        <!-- PRIX -->
+        <section>
+          <div class="price-block">
+            <img src="assets/icons/monnaie.svg" alt="" class="info-icon" />
+
+            <div class="price-text">
+              <p>Billet adulte : {{ l.prixAdulte }}</p>
+              <p>Billet enfant : {{ l.prixEnfant }}</p>
+            </div>
+          </div>
+        </section>
+
+        <hr />
+
+        <!-- CARTE -->
+        <div class="map" *ngIf="lieu.latitude && lieu.longitude">
+          <iframe
+            [src]="safeMapUrl"
+            width="100%"
+            height="180"
+            style="border: 0"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+          >
+          </iframe>
         </div>
-      </section>
 
-      <hr>
+        <!-- COMMENT Y ALLER -->
+        <section *ngIf="l.infosAcces || l.stationBus">
+          <div>
+            <img src="assets/icons/delivery.svg" alt="" class="info-icon" />
+            <p>
+              <ng-container *ngIf="l.stationBus">Bus : {{ l.stationBus }}. </ng-container>
+              {{ l.infosAcces }}
+            </p>
+          </div>
+        </section>
 
-      <!-- LIEN D’INFOS -->
-      <section>
-        <div>
-          <span>🔗</span>
-          <!-- <a (click)="openExternal(l.urlInfos)">Plus d'infos</a> -->
+        <hr />
+
+        <!-- PUBLIC -->
+        <section>
+          <div>
+            <img src="assets/icons/group.svg" alt="" class="info-icon" />
+            <p>Tout public</p>
+          </div>
+        </section>
+
+        <hr />
+
+        <!-- LIEN D’INFOS -->
+        <section>
+          <div>
+            <img src="assets/icons/hyperlink.svg" alt="" class="info-icon" />
+            <!-- <a (click)="openExternal(l.urlInfos)">Plus d'infos</a> -->
+          </div>
+        </section>
+
+        <hr />
+
+        <!-- NOTE -->
+        <div class="rating">
+          <img src="assets/icons/star.svg" alt="" class="info-icon" />
+          <span class="note">4.5 / 5</span>
         </div>
-      </section>
-
-      <hr>
-
-      <!-- NOTE -->
-      <div class="rating">
-        <span class="stars">★★★★☆</span>
-        <span class="note">4.5 / 5</span>
-      </div>
-    </article>
-
-  </div>
-</section>
-
+      </article>
+    </div>
+  </section>
 </article>
 
 <!-- AVIS -->
-<div>
-  <p>Tu as exploré cette activité ? Partage ton avis !</p>
-</div>
+<section class="avis-cta">
+  <img
+    src="assets/icons/messager.svg"
+    alt=""
+    class="avis-cta__icon"
+  />
+
+  <div class="avis-cta__content">
+    <p class="avis-cta__text">Tu as exploré ce lieux ?</p>
+
+    <button class="avis-cta__btn" type="button">
+      <span>Donne ton avis !</span>
+    </button>
+  </div>
+</section>
