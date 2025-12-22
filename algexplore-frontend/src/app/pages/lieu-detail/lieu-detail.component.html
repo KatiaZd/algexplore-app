@@ -7,40 +7,146 @@
   <button (click)="goBack()">Retour</button>
 </section>
 
-<section class="lieu-detail-page" *ngIf="!isLoading && !hasError && lieu">
+<article *ngIf="lieu as l">
 
-  <button class="back-btn" (click)="goBack()">← Retour</button>
+<!-- HEADER -->
+  <header class="hero">
+    <img [src]="l.coverUrl" [alt]="l.nom" />
 
-  <header class="header">
-    <h1 class="lieu-nom">{{ lieu.nom }}</h1>
-    <p class="lieu-adresse">{{ lieu.adresse }}</p>
+    <div class="hero-text">
+      <!-- Catégorie du lieux -->
+       <h1>{{ l.nom }}</h1>
+       <!-- Date de l'event -->
+        
+    <!-- Icon favori et partager -->
+
+    <div class="hero-actions" >
+      <button class="icon-btn" aria-label="Ajouter aux favoris">♡</button>
+      <button class="icon-btn" aria-label="Partager">⤴</button>
+    </div>
+    </div>
   </header>
 
-  <article class="content">
-    <section class="description">
-      <h2>Description</h2>
-      <p>{{ lieu.description }}</p>
+<!-- DESCRIPTION -->
+<section class="lieu-body" *ngIf="lieu as l">
+
+  <div class="lieu-body__layout">
+    <section class="lieu-body__text">
+      <p class="paragraph">{{ l.description }}</p>
+      <button> Enregistrer </button>
     </section>
 
-    <section class="tarifs" *ngIf="lieu.prixAdulte || lieu.prixEnfant">
-      <h2>Tarifs</h2>
-      <ul>
-        <li *ngIf="lieu.prixAdulte">
-          <strong>Adulte :</strong> {{ lieu.prixAdulte }}
-        </li>
-        <li *ngIf="lieu.prixEnfant">
-          <strong>Enfant :</strong> {{ lieu.prixEnfant }}
-        </li>
-      </ul>
-    </section>
+    
 
-    <section class="infos">
-      <h2>Informations pratiques</h2>
-      <ul>
-        <li><strong>Adresse :</strong> {{ lieu.adresse }}</li>
-        <li><strong>ID interne :</strong> {{ lieu.id }}</li>
-        <li><strong>Créé le :</strong> {{ lieu.dateCreation | date:'short' }}</li>
-      </ul>
-    </section>
-  </article>
+    <!-- COLONNE INFOS (aside) -->
+    <article class="lieu-body__aside">
+      <h2>{{ l.nom }}</h2>
+
+      <!-- ADRESSE -->
+      <div>
+        <span>📍</span>
+        <p>{{ l.adresse }}</p>
+      </div>
+
+        <hr>
+
+      <!-- DATES -->
+<!-- DATES -->
+<section>
+  <div>
+    <span>📅</span>
+
+    <!-- Lieu permanent -->
+    <p *ngIf="l.isPermanent">
+      Permanent
+    </p>
+
+    <!-- Lieu avec dates -->
+    <p *ngIf="!l.isPermanent && l.dateDebut && l.dateFin">
+      Du {{ l.dateDebut | date:'longDate' }}
+      au {{ l.dateFin | date:'longDate' }}
+    </p>
+
+    <!-- Cas de sécurité : une seule date -->
+    <p *ngIf="!l.isPermanent && l.dateDebut && !l.dateFin">
+      À partir du {{ l.dateDebut | date:'longDate' }}
+    </p>
+
+    <p *ngIf="!l.isPermanent && !l.dateDebut && l.dateFin">
+      Jusqu'au {{ l.dateFin | date:'longDate' }}
+    </p>
+  </div>
 </section>
+
+
+      <hr>
+
+      <!-- PRIX -->
+      <section>
+        <div>
+          <span>💰</span>
+          <p>Billet adulte : {{ l.prixAdulte }}</p>
+          <p>Billet enfant : {{ l.prixEnfant }}</p>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- CARTE -->
+      <div class="map" *ngIf="lieu.latitude && lieu.longitude">
+        <iframe
+          [src]="safeMapUrl"
+          width="100%" height="180" style="border:0;" loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+      </div> 
+
+      <!-- COMMENT Y ALLER -->
+      <section *ngIf="l.infosAcces || l.stationBus">
+        <div>
+          <span>🚌</span>
+          <p>
+            <ng-container *ngIf="l.stationBus">Bus : {{ l.stationBus }}. </ng-container>
+            {{ l.infosAcces }}
+          </p>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- PUBLIC -->
+      <section>
+        <div>
+          <span>👥</span>
+          <h3>Tout public</h3>
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- LIEN D’INFOS -->
+      <section>
+        <div>
+          <span>🔗</span>
+          <!-- <a (click)="openExternal(l.urlInfos)">Plus d'infos</a> -->
+        </div>
+      </section>
+
+      <hr>
+
+      <!-- NOTE -->
+      <div class="rating">
+        <span class="stars">★★★★☆</span>
+        <span class="note">4.5 / 5</span>
+      </div>
+    </article>
+
+  </div>
+</section>
+
+</article>
+
+<!-- AVIS -->
+<div>
+  <p>Tu as exploré cette activité ? Partage ton avis !</p>
+</div>

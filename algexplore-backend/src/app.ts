@@ -27,8 +27,16 @@ errorHandler
 */ 
 
 // Sécurité & middlewares
-app.disable('x-powered-by'); // Cache le fait qu’on utilise Express
-app.use(helmet());
+// app.disable('x-powered-by'); // Cache le fait qu’on utilise Express
+// app.use(
+//   helmet({
+//     // On désactive la protection CORP ou on l’assouplit,
+//     // sinon les images ne peuvent pas être chargées depuis Angular (localhost:4200)
+//     crossOriginResourcePolicy: false,
+//     // ou bien :
+//     // crossOriginResourcePolicy: { policy: 'cross-origin' },
+//   })
+// );
 
 // CORS : autorise le front Angular si son origine est dans la liste blanche
 app.use(
@@ -69,9 +77,17 @@ app.use(
 );
 
 // Fichiers statiques (img)
+// app.use(
+//   '/uploads',
+//   express.static(path.resolve(__dirname, '..', 'public', 'uploads'))
+// );
 app.use(
   '/uploads',
-  express.static(path.resolve(process.cwd(), 'public', 'uploads'))
+  (req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.resolve(__dirname, '..', 'public', 'uploads'))
 );
 
 // Healthcheck minimal (liveness)

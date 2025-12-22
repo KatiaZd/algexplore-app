@@ -8,13 +8,20 @@
   [attr.aria-label]="'Voir le détail du lieu ' + lieu.nom"
 
 >
-  <img
-    src="https://via.placeholder.com/300x200"
-    alt="{{ lieu.nom }}"
-  />
+      <img 
+  *ngIf="lieu.coverUrl"
+  [src]="lieu.coverUrl"
+  [alt]="lieu.nom" 
+  loading="lazy"
+/>
+
+<img 
+  *ngIf="!lieu.coverUrl"
+  src="assets/default-cover.jpg"
+  alt="Image non disponible"
+/>
   <div class="card-content">
     <span class="badge">Alger des enfants</span>
     <h3>{{ lieu.nom }}</h3>
-    <p>{{ lieu.description }}</p>
   </div>
 </div>

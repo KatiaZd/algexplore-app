@@ -36,7 +36,7 @@ model Lieu {
   nom          String          @map("nom_lieu") @db.VarChar(250)
   description  String          @map("description_lieu") @db.Text
   adresse      String          @db.VarChar(255)
-  dateCreation DateTime        @map("date_creation") @db.Date
+  isPermanent  Boolean         @default(true) @map("est_permanent") @db.Boolean
   dateDebut    DateTime?       @map("date_debut") @db.Date
   dateFin      DateTime?       @map("date_fin") @db.Date
   prixAdulte   String?         @map("prix_adulte") @db.VarChar(50)
@@ -83,11 +83,10 @@ model Photo {
   id          Int     @id @default(autoincrement()) @map("id_photo")
   url         String  @map("url_photo") @db.VarChar(255)
   description String? @map("description_photo") @db.Text
-  lieuId      Int     @map("id_lieu")
+  lieuId      Int     @unique @map("id_lieu")
 
   lieu Lieu @relation(fields: [lieuId], references: [id])
 
-  @@index([lieuId])
   @@map("photo")
 }
 
