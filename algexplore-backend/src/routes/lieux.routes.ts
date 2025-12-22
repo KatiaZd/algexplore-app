@@ -4,6 +4,13 @@ import { validate } from '../middlewares/validate';
 import { LieuCreateSchema } from '../validation/lieu.schema';
 import { LieuUpdateSchema } from '../validation/lieuUpdate.schema';
 
+// Image par défaut si un lieu n’a aucune photo
+const DEFAULT_COVER = '/uploads/default-lieu-cover.jpg';
+
+const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
+const abs = (url: string | null) =>
+  url ? (url.startsWith('http') ? url : `${BASE_URL}${url}`) : null;
+
 const prisma = new PrismaClient();
 const router = Router();
 
@@ -67,12 +74,12 @@ router.get('/', async (req: Request, res: Response) => {
       prisma.lieu.count({ where }),
       prisma.lieu.findMany({
         where,
-        orderBy: { dateCreation: 'desc' }, // les plus récents d'abord
+
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
           quartier: true,
-          photos: true,
+          photos: { orderBy: { id: 'asc' } }, // ← cover stable
           categories: {
             include: { categorie: true }, // pour avoir le nom de la catégorie
           },
@@ -87,7 +94,7 @@ router.get('/', async (req: Request, res: Response) => {
     ]);
 
     // 4. Calculer la moyenne des notes pour chaque lieu en une seule requête groupée
-    const lieuIds = lieux.map(l => l.id);
+    const lieuIds = lieux.map((l) => l.id);
 
     const notes = lieuIds.length
       ? await prisma.avis.groupBy({
@@ -103,33 +110,41 @@ router.get('/', async (req: Request, res: Response) => {
       avgByLieuId.set(n.lieuId, n._avg.note ?? 0);
     }
 
-    // 5. Mise en forme de la réponse côté API (important pour le front)
-    const items = lieux.map(l => ({
-      id: l.id,
-      nom: l.nom,
-      description: l.description,
-      adresse: l.adresse,
-      dateCreation: l.dateCreation,
-      prixAdulte: l.prixAdulte,
-      prixEnfant: l.prixEnfant,
-      latitude: l.latitude ? Number(l.latitude) : null,
-      longitude: l.longitude ? Number(l.longitude) : null,
-      publicCible: l.publicCible,
-      urlInfos: l.urlInfos,
-      infosAcces: l.infosAcces,
-      quartier: l.quartier?.nom, // on renvoie juste le nom du quartier
-      categories: l.categories.map(c => c.categorie.nom),
-      photos: l.photos.map(p => ({
+    // 5. Mise en forme de la réponse côté API
+    const items = lieux.map((l) => {
+      const photos = l.photos.map((p) => ({
         id: p.id,
-        url: p.url,
+        url: abs(p.url), // ← /uploads/... devient http://localhost:3000/uploads/...
         description: p.description,
-      })),
-      stats: {
-        avisCount: l._count.avis,
-        favorisCount: l._count.favoris,
-        avgNote: avgByLieuId.get(l.id) ?? 0,
-      },
-    }));
+      }));
+
+      return {
+        id: l.id,
+        nom: l.nom,
+        description: l.description,
+        adresse: l.adresse,
+        // on ne renvoie pas dateCreation côté public
+        dateDebut: l.dateDebut,
+        dateFin: l.dateFin,
+        prixAdulte: l.prixAdulte,
+        prixEnfant: l.prixEnfant,
+        latitude: l.latitude ? Number(l.latitude) : null,
+        longitude: l.longitude ? Number(l.longitude) : null,
+        publicCible: l.publicCible,
+        urlInfos: l.urlInfos,
+        infosAcces: l.infosAcces,
+        quartier: l.quartier?.nom ?? null,
+        categories: l.categories.map((c) => c.categorie.nom),
+        photos, // URLs absolues
+        // 1re photo sinon image par défaut
+        coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
+        stats: {
+          avisCount: l._count.avis,
+          favorisCount: l._count.favoris,
+          avgNote: avgByLieuId.get(l.id) ?? 0,
+        },
+      };
+    });
 
     // 6. Réponse finale
     res.json({
@@ -176,7 +191,7 @@ router.get('/:id', async (req: Request, res: Response) => {
       where: { id },
       include: {
         quartier: true,
-        photos: true,
+        photos: { orderBy: { id: 'asc' } }, // ← cover stable
         categories: {
           include: { categorie: true },
         },
@@ -202,18 +217,24 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
 
     const avgNote =
-      notes.length > 0 && notes[0]._avg.note != null
-        ? notes[0]._avg.note
-        : 0;
+      notes.length > 0 && notes[0]._avg.note != null ? notes[0]._avg.note : 0;
 
     // On renvoie un objet nettoyé, cohérent avec /lieux (liste)
     // => comme ça, le front peut réutiliser les mêmes champs
+    const photos = lieu.photos.map((p) => ({
+      id: p.id,
+      url: abs(p.url), // ← URL absolue
+      description: p.description,
+    }));
+
     const payload = {
       id: lieu.id,
       nom: lieu.nom,
       description: lieu.description,
       adresse: lieu.adresse,
-      dateCreation: lieu.dateCreation,
+      // pas de dateCreation pour le front public
+      dateDebut: lieu.dateDebut,
+      dateFin: lieu.dateFin,
       prixAdulte: lieu.prixAdulte,
       prixEnfant: lieu.prixEnfant,
       latitude: lieu.latitude ? Number(lieu.latitude) : null,
@@ -222,16 +243,14 @@ router.get('/:id', async (req: Request, res: Response) => {
       urlInfos: lieu.urlInfos,
       infosAcces: lieu.infosAcces,
       quartier: lieu.quartier?.nom ?? null,
-      categories: lieu.categories.map(c => c.categorie.nom),
-      photos: lieu.photos.map(p => ({
-        id: p.id,
-        url: p.url,
-        description: p.description,
-      })),
+      categories: lieu.categories.map((c) => c.categorie.nom),
+      photos, // URLs absolues
+      // 1re photo sinon image par défaut
+      coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
       stats: {
         avisCount: lieu._count.avis,
         favorisCount: lieu._count.favoris,
-        avgNote: avgNote,
+        avgNote,
       },
     };
 
@@ -258,9 +277,21 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', validate(LieuCreateSchema), async (req: Request, res: Response) => {
   try {
     const {
-      nom, description, adresse, dateCreation, dateDebut, dateFin,
-      prixAdulte, prixEnfant, latitude, longitude, publicCible,
-      urlInfos, infosAcces, quartierNom, categories,
+      nom,
+      description,
+      adresse,
+      dateCreation,
+      dateDebut,
+      dateFin,
+      prixAdulte,
+      prixEnfant,
+      latitude,
+      longitude,
+      publicCible,
+      urlInfos,
+      infosAcces,
+      quartierNom,
+      categories,
     } = req.body;
 
     // 1) Quartier (créé s'il n'existe pas)
@@ -281,7 +312,7 @@ router.post('/', validate(LieuCreateSchema), async (req: Request, res: Response)
         dateFin: dateFin ? new Date(dateFin) : null,
         prixAdulte: prixAdulte ?? null,
         prixEnfant: prixEnfant ?? null,
-        latitude: latitude ?? null,   // Decimal -> string OK
+        latitude: latitude ?? null, // Decimal -> string OK
         longitude: longitude ?? null, // Decimal -> string OK
         publicCible: publicCible ?? null,
         urlInfos: urlInfos ?? null,
@@ -312,11 +343,40 @@ router.post('/', validate(LieuCreateSchema), async (req: Request, res: Response)
       include: {
         quartier: true,
         categories: { include: { categorie: true } },
-        photos: true,
+        photos: { orderBy: { id: 'asc' } },
       },
     });
 
-    res.status(201).json(full);
+    // mise en forme cohérente (URLs absolues + coverUrl)
+    const photos = (full?.photos ?? []).map((p) => ({
+      id: p.id,
+      url: abs(p.url),
+      description: p.description,
+    }));
+
+    const payload = {
+      id: full!.id,
+      nom: full!.nom,
+      description: full!.description,
+      adresse: full!.adresse,
+      // on ne renvoie pas dateCreation
+      dateDebut: full!.dateDebut,
+      dateFin: full!.dateFin,
+      prixAdulte: full!.prixAdulte,
+      prixEnfant: full!.prixEnfant,
+      latitude: full!.latitude ? Number(full!.latitude) : null,
+      longitude: full!.longitude ? Number(full!.longitude) : null,
+      publicCible: full!.publicCible,
+      urlInfos: full!.urlInfos,
+      infosAcces: full!.infosAcces,
+      quartier: full!.quartier?.nom ?? null,
+      categories: full!.categories.map((c) => c.categorie.nom),
+      photos,
+      // 1re photo sinon image par défaut
+      coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
+    };
+
+    res.status(201).json(payload);
   } catch (err) {
     console.error('POST /lieux error', err);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -434,11 +494,39 @@ router.put('/:id', validate(LieuUpdateSchema), async (req: Request, res: Respons
       include: {
         quartier: true,
         categories: { include: { categorie: true } },
-        photos: true,
+        photos: { orderBy: { id: 'asc' } },
       },
     });
 
-    res.json(full);
+    const photos = (full?.photos ?? []).map((p) => ({
+      id: p.id,
+      url: abs(p.url),
+      description: p.description,
+    }));
+
+    const payload = {
+      id: full!.id,
+      nom: full!.nom,
+      description: full!.description,
+      adresse: full!.adresse,
+      // pas de dateCreation vers le front
+      dateDebut: full!.dateDebut,
+      dateFin: full!.dateFin,
+      prixAdulte: full!.prixAdulte,
+      prixEnfant: full!.prixEnfant,
+      latitude: full!.latitude ? Number(full!.latitude) : null,
+      longitude: full!.longitude ? Number(full!.longitude) : null,
+      publicCible: full!.publicCible,
+      urlInfos: full!.urlInfos,
+      infosAcces: full!.infosAcces,
+      quartier: full!.quartier?.nom ?? null,
+      categories: full!.categories.map((c) => c.categorie.nom),
+      photos,
+      // 1re photo sinon image par défaut
+      coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
+    };
+
+    res.json(payload);
   } catch (err) {
     console.error('PUT /lieux/:id error', err);
     res.status(500).json({ error: 'Internal Server Error' });
