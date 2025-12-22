@@ -3,6 +3,7 @@ $white: #ffffff;
 $black: #000000;
 $kaki: #636c2f;
 $beige: #fef8f2;
+$terracota: #D1603D;
 
 /* Typographie */
 $font: 'Montserrat', sans-serif;
@@ -10,11 +11,13 @@ $font: 'Montserrat', sans-serif;
 /* Border-radius */
 $radius-soft: 5px;
 $radius-full: 25px;
+$radius: 12px;
 
 /* Breakpoints responsive */
 $bp-mobile: 480px;
 $bp-tablet: 768px;
 $bp-desktop: 1024px;
+$bp-desktop-large: 1280px;
 $bp-large: 1440px;
 
 /* Button */
