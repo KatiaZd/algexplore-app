@@ -78,6 +78,7 @@ async function ensureLieuAvecCategories(input: {
   infosAcces?: string | null;
   quartierNom: string;         // Quartier.nom
   categories: string[];        // Categorie.nom
+  categoriePrincipale: string; 
 }) {
   const q = await ensureQuartier(input.quartierNom);
 
@@ -86,13 +87,36 @@ async function ensureLieuAvecCategories(input: {
     where: { nom: input.nom, quartierId: q.id },
   });
 
-  // 2) Sinon, crée le lieu
-  if (!lieu) {
+  // 2) Si le lieu existe -> on le met à jour (sinon tes modifs de seed ne se verront jamais)
+  if (lieu) {
+    lieu = await prisma.lieu.update({
+      where: { id: lieu.id },
+      data: {
+        nom: input.nom,
+        description: input.description,
+        adresse: input.adresse,
+        categoriePrincipale: input.categoriePrincipale,
+        isPermanent: input.isPermanent ?? false,
+        dateDebut: input.dateDebut ?? null,
+        dateFin: input.dateFin ?? null,
+        prixAdulte: input.prixAdulte ?? null,
+        prixEnfant: input.prixEnfant ?? null,
+        latitude: input.latitude ?? null,
+        longitude: input.longitude ?? null,
+        publicCible: input.publicCible ?? null,
+        urlInfos: input.urlInfos ?? null,
+        infosAcces: input.infosAcces ?? null,
+        quartier: { connect: { id: q.id } },
+      },
+    });
+  } else {
+    // 3) Sinon -> crée le lieu
     lieu = await prisma.lieu.create({
       data: {
         nom: input.nom,
         description: input.description,
         adresse: input.adresse,
+        categoriePrincipale: input.categoriePrincipale,
         isPermanent: input.isPermanent ?? false,
         dateDebut: input.dateDebut ?? null,
         dateFin: input.dateFin ?? null,
@@ -108,12 +132,11 @@ async function ensureLieuAvecCategories(input: {
     });
   }
 
-  // 3) Rattache les catégories via la table pivot (LieuCategorie)
+  // 4) Rattache les catégories via la table pivot (LieuCategorie)
   for (const nomCat of input.categories) {
     const cat = await ensureCategorie(nomCat);
     await prisma.lieuCategorie.upsert({
       where: {
-        // @@id([lieuId, categorieId]) → sélecteur composite
         lieuId_categorieId: { lieuId: lieu.id, categorieId: cat.id },
       },
       update: {},
@@ -123,6 +146,7 @@ async function ensureLieuAvecCategories(input: {
 
   return lieu;
 }
+
 
 async function main() {
   // --- Utilisateur de démo ---
@@ -135,8 +159,8 @@ async function main() {
 
   // --- Catégories de base ---
   const baseCats = [
-    'musée', 'restaurant', 'parc', 'architecture', 'histoire',
-    'famille', 'café', 'concept-store', 'enfant', 'culture', 'nature', 'zoo', 'salon', 
+    'evenement', 'balades', 'patrimoine', 'culture', 'cafe',
+    'artisanat', 'enfant', 
   ];
   await Promise.all(baseCats.map(ensureCategorie));
 
@@ -145,9 +169,7 @@ async function main() {
     nom: 'Parc Zoologique de Ben Aknoun',
     description:
       `Le Parc Zoologique et des Loisirs de Ben Aknoun est l'un des lieux emblématiques d'Alger, niché entre la verdure de Ben Aknoun et les hauteurs d'Hydra.  Véritable poumon vert de la capitale, il s'étend sur plus de 300 hectares mêlant espaces boisés, zones de détente et aires dédiées à la découverte animale. Inauguré au début des années 1980, le parc a longtemps été un lieu incontournable pour les familles algéroises, attirées par son ambiance à la fois éducative et récréative. On y croise des girafes, des lions, des zèbres, des singes ou encore des autruches, répartis dans de vastes enclos ombragés. L'endroit accueille aujourd'hui plus d'un millier d'animaux issus d'une centaine d'espèces différentes, offrant aux visiteurs un aperçu de la faune africaine et mondiale.
-
       Outre la partie zoologique, le site comprend un grand espace de loisirs avec des manèges, un petit train touristique et des coins pique-nique aménagés, faisant du parc un lieu privilégié pour les sorties en famille ou entre amis. Malgré une période de déclin, marquée par un manque d'entretien et des installations vieillissantes, le Parc de Ben Aknoun connaît depuis peu un projet de rénovation d'envergure, avec la création d'un parc safari moderne et la réhabilitation progressive des infrastructures.
-
       Facilement accessible depuis le centre d'Alger, il offre une parenthèse nature au cœur de la ville et demeure un lieu chargé de nostalgie pour plusieurs générations. Entre balade sous les pins, observation des animaux et moments de détente en plein air, le Parc Zoologique de Ben Aknoun continue de séduire ceux qui recherchent un contact authentique avec la nature, à quelques minutes seulement de l'agitation urbaine.`,
     adresse: 'Route du Zoo, Ben Aknoun, Alger',
     isPermanent: true,
@@ -159,6 +181,7 @@ async function main() {
     urlInfos: 'https://www.parcbenaknoun.dz/',
     infosAcces: "Accès en bus via la station « Ben Aknoun Zoo » desservie par les lignes 6 et 51, ou en taxi depuis le centre-ville (15 min environ). Parking disponible sur place.",
     quartierNom: 'Ben Aknoun',
+    categoriePrincipale: 'balades',
     categories: ['parc', 'zoo', 'loisirs', 'famille', 'enfants', 'nature'],
   });
 
@@ -178,6 +201,7 @@ async function main() {
     urlInfos: 'https://exemple.dz/hamma',
     infosAcces: 'Métro Jardin d’Essai + tram/bus',
     quartierNom: 'Hamma',
+    categoriePrincipale: 'balades',
     categories: ['parc', 'histoire', 'famille'],
   });
 
@@ -191,16 +215,17 @@ async function main() {
      au dynamisme culturel de la capitale.`,
   adresse: 'Opéra d’Alger Boualem Bessaïh, Ouled Fayet',
   isPermanent: false,
-  dateDebut: new Date('2026-04-10'),
-  dateFin: new Date('2026-04-15'),
+  dateDebut: new Date('2026-03-15'),
+  dateFin: new Date('2026-04-01'),
   prixAdulte: '1500 DA',
-  prixEnfant: null,
+  prixEnfant: '700 DA',
   latitude: '36.73390000',
   longitude: '2.94460000',
   publicCible: 'Adultes, jeunes adultes, amateurs de spectacles',
   urlInfos: 'https://www.algerire.dz',
   infosAcces: 'Accès en voiture ou taxi depuis le centre-ville. Parking disponible à proximité.',
   quartierNom: 'Ouled Fayet',
+  categoriePrincipale: 'evenement',
   categories: ['culture', 'festival', 'spectacle'],
 });
 
@@ -222,7 +247,8 @@ const atelierElFen = await ensureLieuAvecCategories({
   urlInfos: 'https://atelier-elfen.dz',
   infosAcces: 'Accessible à pied depuis la Grande Poste. Bus et métro à proximité.',
   quartierNom: 'Alger Centre',
-  categories: ['artisanat', 'atelier', 'culture', 'créatif'],
+  categoriePrincipale: 'artisanat',
+  categories: ['artisanat', 'atelier', 'creatif'],
 });
 
 const bloomConceptStore = await ensureLieuAvecCategories({
@@ -243,6 +269,7 @@ const bloomConceptStore = await ensureLieuAvecCategories({
   urlInfos: 'https://bloom-conceptstore.dz',
   infosAcces: 'Situé à proximité de la Grande Poste. Accès facile à pied, métro Tafourah–Grande Poste et bus.',
   quartierNom: 'Alger Centre',
+  categoriePrincipale: 'artisanat',
   categories: ['concept-store', 'artisanat', 'culture', 'shopping'],
 });
 
@@ -264,7 +291,8 @@ const sunnyBrunch = await ensureLieuAvecCategories({
   urlInfos: 'https://sunnybrunch.dz',
   infosAcces: 'À quelques minutes à pied de la Grande Poste. Métro Tafourah–Grande Poste et lignes de bus à proximité.',
   quartierNom: 'Alger Centre',
-  categories: ['restaurant', 'brunch', 'café', 'famille'],
+  categoriePrincipale: 'cafe',
+  categories: ['restaurant', 'brunch', 'cafe'],
 });
 
 const lesPagesVagabondes = await ensureLieuAvecCategories({
@@ -285,7 +313,8 @@ const lesPagesVagabondes = await ensureLieuAvecCategories({
   urlInfos: 'https://lespagesvagabondes.dz',
   infosAcces: 'Accessible en bus et taxi depuis le centre-ville. Quartier calme et résidentiel.',
   quartierNom: 'El Madania',
-  categories: ['café', 'librairie', 'culture', 'lecture'],
+  categoriePrincipale: 'cafe',
+  categories: ['cafe', 'librairie', 'culture', 'lecture'],
 });
 
 const focusCafe = await ensureLieuAvecCategories({
@@ -306,7 +335,8 @@ const focusCafe = await ensureLieuAvecCategories({
   urlInfos: 'https://focuscafe.dz',
   infosAcces: 'Accès facile en voiture ou taxi. Stationnement possible à proximité.',
   quartierNom: 'Bir Mourad Raïs',
-  categories: ['café', 'coworking', 'télétravail', 'calme'],
+  categoriePrincipale: 'cafe',
+  categories: ['cafe', 'coworking', 'teletravail', 'calme'],
 });
 
 const capCaxine = await ensureLieuAvecCategories({
@@ -327,7 +357,8 @@ const capCaxine = await ensureLieuAvecCategories({
   urlInfos: null,
   infosAcces: 'Accessible en voiture ou taxi depuis le centre-ville. Stationnement possible à proximité.',
   quartierNom: 'Caxine',
-  categories: ['nature', 'balade', 'vue', 'mer'],
+  categoriePrincipale: 'balades',
+  categories: ['nature', 'balades', 'vue', 'mer'],
 });
 
 const casbahAlger = await ensureLieuAvecCategories({
@@ -348,6 +379,7 @@ const casbahAlger = await ensureLieuAvecCategories({
   urlInfos: 'https://whc.unesco.org/fr/list/565',
   infosAcces: 'Accessible à pied depuis la Grande Poste ou en taxi. Visites guidées recommandées.',
   quartierNom: 'Casbah',
+  categoriePrincipale: 'patrimoine',
   categories: ['histoire', 'patrimoine', 'culture', 'architecture'],
 });
 
@@ -370,7 +402,8 @@ const terraVerde = await ensureLieuAvecCategories({
   urlInfos: 'https://terraverde-alger.dz',
   infosAcces: 'Accès en bus ou taxi depuis Ben Aknoun. Parking disponible à proximité.',
   quartierNom: 'Ben Aknoun',
-  categories: ['enfant', 'nature', 'éducation', 'famille', 'écologie'],
+  categoriePrincipale: 'enfant',
+  categories: ['enfant', 'nature', 'education', 'famille', 'ecologie'],
 });
 
 const cinemaDesRivages = await ensureLieuAvecCategories({
@@ -393,7 +426,8 @@ const cinemaDesRivages = await ensureLieuAvecCategories({
   urlInfos: 'https://cinemadesrivages.dz',
   infosAcces: 'Accès en voiture ou bus depuis Alger. Parking disponible à Sidi Fredj.',
   quartierNom: 'Sidi Fredj',
-  categories: ['culture', 'cinéma', 'festival', 'événement'],
+  categoriePrincipale: 'evenement',
+  categories: ['culture', 'cinema', 'festival', 'evenement'],
 });
 
 const nuitsDuChaabi = await ensureLieuAvecCategories({
@@ -416,6 +450,7 @@ const nuitsDuChaabi = await ensureLieuAvecCategories({
   urlInfos: 'https://nuits-du-chaabi.dz',
   infosAcces: 'Accessible en bus et taxi depuis le centre-ville. Ambiance populaire, arrivée conseillée en avance.',
   quartierNom: 'Bab El Oued',
+  categoriePrincipale: 'evenement',
   categories: ['musique', 'chaabi', 'culture', 'festival'],
 });
 
@@ -437,7 +472,8 @@ const foretDeBainem = await ensureLieuAvecCategories({
   urlInfos: null,
   infosAcces: 'Accessible en voiture ou taxi depuis Alger Ouest. Aires de stationnement à proximité.',
   quartierNom: 'Bainem',
-  categories: ['nature', 'forêt', 'balade', 'famille'],
+  categoriePrincipale: 'balades',
+  categories: ['nature', 'foret', 'balades', 'famille'],
 });
 
 const lesSablettes = await ensureLieuAvecCategories({
@@ -458,7 +494,8 @@ const lesSablettes = await ensureLieuAvecCategories({
   urlInfos: 'https://lessablettes.dz',
   infosAcces: 'Accessible en tramway (station Les Sablettes), bus et voiture. Parking disponible.',
   quartierNom: 'Les Sablettes',
-  categories: ['mer', 'loisirs', 'famille', 'balade'],
+  categoriePrincipale: 'balades',
+  categories: ['mer', 'loisirs', 'famille', 'balades'],
 });
 
 const ramadanCreatif = await ensureLieuAvecCategories({
@@ -481,7 +518,8 @@ const ramadanCreatif = await ensureLieuAvecCategories({
   urlInfos: 'https://ramadan-creatif.dz',
   infosAcces: 'Accessible en tramway, bus et voiture. Activités principalement en soirée.',
   quartierNom: 'Les Sablettes',
-  categories: ['artisanat', 'marché', 'ramadan', 'événement', 'famille'],
+  categoriePrincipale: 'artisanat',
+  categories: ['artisanat', 'marche', 'ramadan', 'evenement', 'famille'],
 });
 
 const maqamEchahid = await ensureLieuAvecCategories({
@@ -494,15 +532,16 @@ const maqamEchahid = await ensureLieuAvecCategories({
      de recueillement et de transmission de l’histoire.`,
   adresse: 'Maqam Echahid, El Madania, Alger',
   isPermanent: true,
-  prixAdulte: null,
-  prixEnfant: null,
+  prixAdulte: '500 DA',
+  prixEnfant: '250 DA',
   latitude: '36.74530000',
   longitude: '3.06660000',
   publicCible: 'Familles, scolaires, touristes, citoyens',
   urlInfos: 'https://www.algeria.com/maqam-echahid',
   infosAcces: 'Accessible en voiture, bus ou téléphérique depuis différents quartiers d’Alger.',
   quartierNom: 'El Madania',
-  categories: ['histoire', 'mémoire', 'patrimoine', 'monument', 'culture'],
+  categoriePrincipale: 'patrimoine',
+  categories: ['histoire', 'memoire', 'patrimoine', 'monument', 'culture'],
 });
 
 const museeBeauxArts = await ensureLieuAvecCategories({
@@ -524,7 +563,8 @@ const museeBeauxArts = await ensureLieuAvecCategories({
   urlInfos: 'https://www.museebeauxarts-alger.dz',
   infosAcces: 'Accessible via le Jardin d’Essai du Hamma. Bus et métro à proximité.',
   quartierNom: 'Hamma',
-  categories: ['musée', 'art', 'culture', 'patrimoine'],
+  categoriePrincipale: 'culture',
+  categories: ['musee', 'art', 'culture', 'patrimoine'],
 });
 
 const museeDesEnfants = await ensureLieuAvecCategories({
@@ -545,7 +585,8 @@ const museeDesEnfants = await ensureLieuAvecCategories({
   urlInfos: 'https://lepetitexplorateur.dz',
   infosAcces: 'Accès facile depuis Ben Aknoun en bus ou taxi. Parking à proximité.',
   quartierNom: 'Ben Aknoun',
-  categories: ['musée', 'enfant', 'éducation', 'famille', 'culture'],
+  categoriePrincipale: 'enfant',
+  categories: ['enfant', 'musee', 'éducation', 'famille', 'culture'],
 });
 
 const palaisDeLaCulture = await ensureLieuAvecCategories({
@@ -566,6 +607,7 @@ const palaisDeLaCulture = await ensureLieuAvecCategories({
   urlInfos: 'https://palaisculture.dz',
   infosAcces: 'Accessible en bus et taxi depuis le centre-ville. Parking disponible à proximité.',
   quartierNom: 'El Madania',
+  categoriePrincipale: 'culture',
   categories: ['culture', 'spectacle', 'exposition', 'patrimoine'],
 });
 
@@ -588,7 +630,8 @@ const palaisDesRais = await ensureLieuAvecCategories({
   urlInfos: 'https://palaisdesrais.dz',
   infosAcces: 'Accessible à pied depuis la Casbah ou en taxi. Proche du front de mer.',
   quartierNom: 'Casbah',
-  categories: ['patrimoine', 'histoire', 'culture', 'architecture', 'exposition'],
+  categoriePrincipale: 'patrimoine',
+  categories: ['histoire', 'culture', 'architecture', 'exposition', 'patrimoine'],
 });
 
 const sunnyLandPark = await ensureLieuAvecCategories({
@@ -610,6 +653,7 @@ const sunnyLandPark = await ensureLieuAvecCategories({
   urlInfos: 'https://sunnylandpark.dz',
   infosAcces: 'Accessible en voiture ou bus depuis Alger Ouest. Parking disponible à proximité.',
   quartierNom: 'Zéralda',
+  categoriePrincipale: 'enfant',
   categories: ['parc', 'loisirs', 'famille', 'enfant', 'plein-air'],
 });
 
@@ -624,16 +668,17 @@ const salonLivreAlgerien = await ensureLieuAvecCategories({
   adresse: 'Palais des Expositions – SAFEX, Pins Maritimes, Alger',
   isPermanent: false,
   dateDebut: new Date('2026-03-10'),
-  dateFin: new Date('2026-03-20'),
+  dateFin: new Date('2026-04-01'),
   prixAdulte: '300 DA',
-  prixEnfant: null,
+  prixEnfant: '150 DA',
   latitude: '36.72390000',
   longitude: '3.16520000',
   publicCible: 'Lecteurs, étudiants, familles, professionnels du livre',
   urlInfos: 'https://salondulivre-algerien.dz',
   infosAcces: 'Accessible en tramway (Pins Maritimes), bus et voiture. Grand parking sur site.',
   quartierNom: 'Pins Maritimes',
-  categories: ['livre', 'culture', 'salon', 'événement'],
+  categoriePrincipale: 'evenement',
+  categories: ['culture', 'salon', 'evenement', 'salon du livre'],
 });
 
 
@@ -785,11 +830,11 @@ await prisma.photo.upsert({
 await prisma.photo.upsert({
   where: { lieuId: cinemaDesRivages.id },
   update: {
-    url: '/uploads/lieux/cinema-et-memoire.jpg',
+    url: '/uploads/lieux/cinema-et-memoire.jpeg',
     description: 'Cinéma des Rivages est un festival annuel dédié au cinéma d’auteur et aux productions méditerranéennes',
   },
   create: {
-    url: '/uploads/lieux/cinema-et-memoire.jpg',
+    url: '/uploads/lieux/cinema-et-memoire.jpeg',
     description: 'Cinéma des Rivages est un festival annuel dédié au cinéma d’auteur et aux productions méditerranéennes',
     lieuId: cinemaDesRivages.id,
   },

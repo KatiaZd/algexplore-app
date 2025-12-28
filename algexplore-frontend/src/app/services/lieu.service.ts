@@ -4,6 +4,14 @@ import { Observable, map } from 'rxjs';
 
 const API_BASE = 'http://localhost:3000';
 
+/** Réponse paginée renvoyée par l’API */
+interface LieuxApiResponse {
+  page: number;
+  pageSize: number;
+  total: number;
+  items: LieuApi[];
+}
+
 /** Modèle renvoyé par le backend */
 export interface LieuApi {
   id: number;
@@ -22,18 +30,19 @@ export interface LieuApi {
   infosAcces?: string | null;
   quartier?: string | null;
   categories?: string[] | null;
+  categoriePrincipale?: string | null;
   stationBus?: string | null;
   coverUrl?: string | null;
   type?: string | null;
 }
 
-/** Modèle front propre en camelCase */
+/** Modèle front propre (camelCase, valeurs normalisées) */
 export interface Lieu {
   id: number;
   nom: string;
   description?: string | null;
   adresse?: string | null;
-  isPermanent: boolean; 
+  isPermanent: boolean;
   dateDebut?: string | Date | null;
   dateFin?: string | Date | null;
   prixAdulte?: string | null;
@@ -44,30 +53,26 @@ export interface Lieu {
   urlInfos?: string | null;
   infosAcces?: string | null;
   quartier?: string | null;
+  categoriePrincipale?: string | null;
   categories?: string[] | null;
   stationBus?: string | null;
   coverUrl?: string | null;
   type?: string | null;
 }
 
-/** Réponse paginée de l’API */
-interface LieuxApiResponse {
-  items: LieuApi[];
-  page: number;
-  pageSize: number;
-  total: number;
-}
-
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class LieuService {
   private apiUrl = `${API_BASE}/lieux`;
   private http = inject(HttpClient);
 
-  /** Mapper typé : transforme LieuApi → Lieu */
+  /**
+   * Mapper typé : transforme LieuApi → Lieu (front)
+   * - normalise les valeurs null
+   * - calcule isPermanent si absent
+   */
   private mapLieu(api: LieuApi): Lieu {
-    console.log('API Lieu reçu :', api); // ← DEBUG
 
     return {
       id: api.id,
@@ -86,24 +91,41 @@ export class LieuService {
       infosAcces: api.infosAcces ?? null,
       quartier: api.quartier ?? null,
       categories: api.categories ?? null,
+      categoriePrincipale: api.categoriePrincipale ?? null,
       stationBus: api.stationBus ?? null,
-      // ON NE TOUCHE PAS à L’URL → le back envoie déjà l’URL complète
+      // L’URL est déjà absolue côté back
       coverUrl: api.coverUrl ?? null,
       type: api.type ?? null,
     };
   }
 
-  /** Récupère la liste complète des lieux */
+  /**
+   * Récupère la liste complète des lieux (sans filtre)
+   */
   getLieux(): Observable<Lieu[]> {
-    return this.http.get<LieuxApiResponse>(this.apiUrl).pipe(
+    const params = { page: 1, pageSize: 50 };
+    return this.http.get<LieuxApiResponse>(this.apiUrl, { params }).pipe(
       map((res) => res.items.map((item) => this.mapLieu(item)))
     );
   }
 
-  /** Récupère un lieu par ID */
+  /**
+   * Récupère un lieu par son ID
+   */
   getLieuById(id: number): Observable<Lieu> {
     return this.http.get<LieuApi>(`${this.apiUrl}/${id}`).pipe(
       map((apiLieu) => this.mapLieu(apiLieu))
+    );
+  }
+
+  /**
+   * Recherche de lieux via la barre de recherche
+   * - q = texte libre (nom, description, adresse, catégories)
+   */
+  getLieuxByQuery(q: string): Observable<Lieu[]> {
+    const params = { q };
+    return this.http.get<LieuxApiResponse>(this.apiUrl, { params }).pipe(
+      map((res) => res.items.map((item) => this.mapLieu(item)))
     );
   }
 }

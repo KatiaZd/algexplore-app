@@ -1,11 +1,15 @@
+@use '../../../styles/variables' as *;
+
 .section {
   margin: 2rem 0;
 
   .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding: 0 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .carousel-wrap {
+    position: relative;
   }
 
   .carousel {
@@ -14,12 +18,71 @@
     scroll-behavior: smooth;
     gap: 1rem;
     padding: 1rem;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
 
-  button {
-    background: none;
+  .arrow {
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    color: $white;
     border: none;
-    font-size: 1.5rem;
+    background: $kaki;
+    display: grid;
+    place-items: center;
+    font-size: 20px;
+    line-height: 1;
     cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  .arrow:hover {
+    transform: translateY(-1px);
+  }
+
+  .arrow:disabled {
+    opacity: 0.2;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .arrow.overlay {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+  }
+
+  .arrow.overlay.left {
+    left: 8px;
+  }
+
+  .arrow.overlay.right {
+    right: 8px;
+  }
+
+  .carousel-wrap::before,
+  .carousel-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 56px;
+    z-index: 1;
+    pointer-events: none; 
+  }
+
+  .carousel-wrap::before {
+    left: 0;
+  }
+
+  .carousel-wrap::after {
+    right: 0;
   }
 }

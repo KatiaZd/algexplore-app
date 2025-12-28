@@ -49,6 +49,7 @@ model Lieu {
   quartierId   Int             @map("id_quartier")
   // relations
   quartier     Quartier        @relation(fields: [quartierId], references: [id])
+  categoriePrincipale String? 
   categories   LieuCategorie[]
   photos       Photo[]
   avis         Avis[]
@@ -70,6 +71,7 @@ model Categorie {
 model LieuCategorie {
   lieuId      Int @map("id_lieu")
   categorieId Int @map("id_categorie")
+  isPrincipale Boolean @default(false) @map("is_principale")
 
   lieu      Lieu      @relation(fields: [lieuId], references: [id])
   categorie Categorie @relation(fields: [categorieId], references: [id])
