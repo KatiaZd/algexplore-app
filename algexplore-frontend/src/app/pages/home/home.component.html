@@ -1,19 +1,39 @@
 <section class="hero">
-  <h1>AlgExplore : un portail culturel pour explorer Alger avec authenticité, curiosité et envie de partage</h1>
+  <h1>
+    AlgExplore : un portail culturel pour explorer Alger avec authenticité, curiosité et envie de
+    partage
+  </h1>
+
   <p class="subtitle">
-    Découvrez les lieux culturels, événements et bonnes adresses qui font rayonner Alger, pour des sorties riches de sens et de découvertes.
+    Découvrez les lieux culturels, événements et bonnes adresses qui font rayonner Alger, pour des
+    sorties riches de sens et de découvertes.
   </p>
 
   <div class="search-bar">
-    <input type="text" placeholder="Rechercher un lieu, un événement..." />
-    <button>🔍</button>
+    <div class="search-input-wrapper">
+      <input
+        type="text"
+        placeholder="Rechercher un lieu, une catégorie..."
+        [(ngModel)]="searchValue"
+        (keyup.enter)="onSearch()"
+      />
+
+      <button *ngIf="isSearching" class="clear-btn" (click)="clearSearch()" aria-label="Effacer">
+        ✕
+      </button>
+    </div>
+
+    <button type="button" (click)="onSearch()" aria-label="Rechercher">
+      <img src="assets/icons/search.svg" alt="" class="search-icon" />
+    </button>
   </div>
 
   <div class="tags">
-    <span class="tag">Famille</span>
-    <span class="tag">Bon plan</span>
-    <span class="tag">Tourisme</span>
-    <span class="tag">Patrimoine</span>
+    <p class="tags-label">Idées de sorties :</p>
+
+    <button type="button" class="tag" *ngFor="let tag of popularTags" (click)="onTagClick(tag)">
+      {{ tag }}
+    </button>
   </div>
 </section>
 
@@ -24,6 +44,7 @@
   <app-section-carousel
     *ngFor="let section of sections"
     [title]="section.title"
-    [lieux]="section.lieux">
+    [lieux]="section.lieux"
+  >
   </app-section-carousel>
 </section>

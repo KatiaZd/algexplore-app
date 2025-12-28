@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../prisma';
 import { validate } from '../middlewares/validate';
 import { LieuCreateSchema } from '../validation/lieu.schema';
 import { LieuUpdateSchema } from '../validation/lieuUpdate.schema';
@@ -11,91 +11,155 @@ const BASE_URL = process.env.BASE_URL ?? 'http://localhost:3000';
 const abs = (url: string | null) =>
   url ? (url.startsWith('http') ? url : `${BASE_URL}${url}`) : null;
 
-const prisma = new PrismaClient();
+// normalisation (sans accents) pour les comparaisons "catégories".
+// Important: `mode: 'insensitive'` gère la casse, PAS les accents.
+const normalize = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
 const router = Router();
 
 /**
+ * Helper: transforme un lieu Prisma en DTO “front”
+ * -> categoriePrincipale = colonne BDD
+ */
+function toLieuItem(l: any, avgNote = 0) {
+  const photos = (l.photos ?? []).map((p: any) => ({
+    id: p.id,
+    url: abs(p.url),
+    description: p.description,
+  }));
+
+  return {
+    id: l.id,
+    nom: l.nom,
+    description: l.description,
+    adresse: l.adresse,
+    isPermanent: l.isPermanent ?? false,
+    dateDebut: l.dateDebut,
+    dateFin: l.dateFin,
+    prixAdulte: l.prixAdulte,
+    prixEnfant: l.prixEnfant,
+    latitude: l.latitude ? Number(l.latitude) : null,
+    longitude: l.longitude ? Number(l.longitude) : null,
+    publicCible: l.publicCible,
+    urlInfos: l.urlInfos,
+    infosAcces: l.infosAcces,
+    quartier: l.quartier?.nom ?? null,
+
+    // tags/pivot (secondaires)
+    categories: (l.categories ?? []).map((c: any) => c.categorie.nom),
+
+    // colonne BDD
+    categoriePrincipale: l.categoriePrincipale ?? null,
+
+    photos,
+    coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
+
+    stats: l._count
+      ? {
+          avisCount: l._count.avis ?? 0,
+          favorisCount: l._count.favoris ?? 0,
+          avgNote,
+        }
+      : undefined,
+  };
+}
+
+/**
  * GET /lieux
- * Récupère une liste paginée de lieux, avec filtres.
- *
- * Query params possibles :
- *   - page (par défaut 1)
- *   - pageSize (par défaut 10, max 50)
- *   - q (recherche texte dans nom / description / adresse)
- *   - quartier (nom du quartier exact)
- *   - categorie (nom de catégorie exact)
- *
- * Détails :
- *   - renvoie aussi quartier, catégories, photos, stats (avis/favoris/note moyenne)
- *   - format { page, pageSize, total, items: [...] }
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // 1. Récupérer / normaliser les paramètres de requête
     const page = Math.max(parseInt(String(req.query.page ?? '1'), 10), 1);
     const pageSizeRaw = Math.max(parseInt(String(req.query.pageSize ?? '10'), 10), 1);
-    const pageSize = Math.min(pageSizeRaw, 50); // sécurité : pas plus de 50
+    const pageSize = Math.min(pageSizeRaw, 50);
 
     const q = (req.query.q as string | undefined)?.trim();
     const quartier = (req.query.quartier as string | undefined)?.trim();
-    const categorie = (req.query.categorie as string | undefined)?.trim();
 
-    // 2. Construire dynamiquement le "where" Prisma
+    // pivot (tags)
+    const categorie = (req.query.categorie as string | undefined)?.trim();
+    const categorieIdRaw = (req.query.categorieId as string | undefined)?.trim();
+    const categorieId = categorieIdRaw ? Number(categorieIdRaw) : undefined;
+
+    // colonne
+    const categoriePrincipale = (req.query.categoriePrincipale as string | undefined)?.trim();
+
     const where: any = {};
 
-    if (q) {
-      // recherche texte approximative
+    // préparer les versions normalisées (sans accents) pour les filtres catégories
+    const qNorm = q ? normalize(q) : undefined;
+    const categorieNorm = categorie ? normalize(categorie) : undefined;
+    const categoriePrincipaleNorm = categoriePrincipale ? normalize(categoriePrincipale) : undefined;
+
+    // on utilise qNorm uniquement si présent
+    if (q && qNorm) {
       where.OR = [
+        // Recherche texte libre -> on garde q (avec accents) + mode insensitive
         { nom: { contains: q, mode: 'insensitive' } },
         { description: { contains: q, mode: 'insensitive' } },
         { adresse: { contains: q, mode: 'insensitive' } },
+
+        // recherche dans tags -> utiliser qNorm (sans accents)
+        // Sinon "Café" ne matche pas "cafe" en BDD.
+        {
+          categories: {
+            some: {
+              categorie: {
+                nom: { contains: qNorm, mode: 'insensitive' },
+              },
+            },
+          },
+        },
+
+        // recherche dans categoriePrincipale (colonne) -> utiliser qNorm (sans accents)
+        { categoriePrincipale: { contains: qNorm, mode: 'insensitive' } },
       ];
     }
 
     if (quartier) {
-      where.quartier = {
-        nom: { equals: quartier },
-      };
+      where.quartier = { nom: { equals: quartier } };
     }
 
-    if (categorie) {
-      // On filtre les lieux qui ont AU MOINS une catégorie donnée
+    // 'insensitive' peut être refusé/ignoré selon setup Prisma.
+    // Ici on normalise déjà (lowercase + sans accents), donc `mode` n’est plus nécessaire.
+    if (categoriePrincipaleNorm) {
+      where.categoriePrincipale = { equals: categoriePrincipaleNorm };
+    }
+
+    // idem -> on enlève `mode: 'insensitive'` sur equals
+    if (categorieId !== undefined && Number.isFinite(categorieId)) {
+      where.categories = { some: { categorieId } };
+    } else if (categorieNorm) {
       where.categories = {
         some: {
-          categorie: {
-            nom: { equals: categorie },
-          },
+          categorie: { nom: { equals: categorieNorm } },
         },
       };
     }
 
-    // 3. Récupérer total + page de lieux en parallèle
     const [total, lieux] = await Promise.all([
       prisma.lieu.count({ where }),
       prisma.lieu.findMany({
         where,
-
         skip: (page - 1) * pageSize,
         take: pageSize,
         include: {
           quartier: true,
-          photos: { orderBy: { id: 'asc' } }, // ← cover stable
-          categories: {
-            include: { categorie: true }, // pour avoir le nom de la catégorie
-          },
-          _count: {
-            select: {
-              avis: true,
-              favoris: true,
-            },
-          },
+          photos: { orderBy: { id: 'asc' } },
+          categories: { include: { categorie: true } },
+          _count: { select: { avis: true, favoris: true } },
         },
+        orderBy: { id: 'asc' },
       }),
     ]);
 
-    // 4. Calculer la moyenne des notes pour chaque lieu en une seule requête groupée
+    // Moyenne notes (groupBy)
     const lieuIds = lieux.map((l) => l.id);
-
     const notes = lieuIds.length
       ? await prisma.avis.groupBy({
           by: ['lieuId'],
@@ -104,157 +168,47 @@ router.get('/', async (req: Request, res: Response) => {
         })
       : [];
 
-    // Map { lieuId -> moyenne }
     const avgByLieuId = new Map<number, number>();
-    for (const n of notes) {
-      avgByLieuId.set(n.lieuId, n._avg.note ?? 0);
-    }
+    for (const n of notes) avgByLieuId.set(n.lieuId, n._avg.note ?? 0);
 
-    // 5. Mise en forme de la réponse côté API
-    const items = lieux.map((l) => {
-      const photos = l.photos.map((p) => ({
-        id: p.id,
-        url: abs(p.url), // ← /uploads/... devient http://localhost:3000/uploads/...
-        description: p.description,
-      }));
+    const items = lieux.map((l) => toLieuItem(l, avgByLieuId.get(l.id) ?? 0));
 
-      return {
-        id: l.id,
-        nom: l.nom,
-        description: l.description,
-        adresse: l.adresse,
-        // on ne renvoie pas dateCreation côté public
-        dateDebut: l.dateDebut,
-        dateFin: l.dateFin,
-        prixAdulte: l.prixAdulte,
-        prixEnfant: l.prixEnfant,
-        latitude: l.latitude ? Number(l.latitude) : null,
-        longitude: l.longitude ? Number(l.longitude) : null,
-        publicCible: l.publicCible,
-        urlInfos: l.urlInfos,
-        infosAcces: l.infosAcces,
-        quartier: l.quartier?.nom ?? null,
-        categories: l.categories.map((c) => c.categorie.nom),
-        photos, // URLs absolues
-        // 1re photo sinon image par défaut
-        coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
-        stats: {
-          avisCount: l._count.avis,
-          favorisCount: l._count.favoris,
-          avgNote: avgByLieuId.get(l.id) ?? 0,
-        },
-      };
-    });
-
-    // 6. Réponse finale
-    res.json({
-      page,
-      pageSize,
-      total,
-      items,
-    });
+    return res.json({ page, pageSize, total, items });
   } catch (err) {
     console.error('GET /lieux error', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 /**
  * GET /lieux/:id
- * Récupère le détail complet d'un lieu par son id.
- *
- * Règles :
- *   - 400 si l'id n'est pas un nombre valide
- *   - 404 si le lieu n'existe pas
- *   - 200 + JSON du lieu sinon
- *
- * Détails renvoyés :
- *   - informations principales (nom, adresse, description, etc.)
- *   - quartier, catégories, photos
- *   - statistiques (nb avis, nb favoris, note moyenne)
- *
- * Important :
- *   Le format renvoyé est aligné avec les items du GET /lieux,
- *   pour que le front puisse réutiliser les mêmes champs.
  */
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'id invalide' });
 
-    // id pas un nombre => 400
-    if (!Number.isFinite(id)) {
-      return res.status(400).json({ error: 'id invalide' });
-    }
-
-    // On va chercher le lieu avec ses relations utiles
     const lieu = await prisma.lieu.findUnique({
       where: { id },
       include: {
         quartier: true,
-        photos: { orderBy: { id: 'asc' } }, // ← cover stable
-        categories: {
-          include: { categorie: true },
-        },
-        _count: {
-          select: {
-            avis: true,
-            favoris: true,
-          },
-        },
+        photos: { orderBy: { id: 'asc' } },
+        categories: { include: { categorie: true } },
+        _count: { select: { avis: true, favoris: true } },
       },
     });
 
-    // pas trouvé => 404
-    if (!lieu) {
-      return res.status(404).json({ error: 'Lieu introuvable' });
-    }
+    if (!lieu) return res.status(404).json({ error: 'Lieu introuvable' });
 
-    // moyenne des notes pour ce lieu
     const notes = await prisma.avis.groupBy({
       by: ['lieuId'],
       where: { lieuId: id },
       _avg: { note: true },
     });
 
-    const avgNote =
-      notes.length > 0 && notes[0]._avg.note != null ? notes[0]._avg.note : 0;
+    const avgNote = notes[0]?._avg?.note ?? 0;
 
-    // On renvoie un objet nettoyé, cohérent avec /lieux (liste)
-    // => comme ça, le front peut réutiliser les mêmes champs
-    const photos = lieu.photos.map((p) => ({
-      id: p.id,
-      url: abs(p.url), // ← URL absolue
-      description: p.description,
-    }));
-
-    const payload = {
-      id: lieu.id,
-      nom: lieu.nom,
-      description: lieu.description,
-      adresse: lieu.adresse,
-      // pas de dateCreation pour le front public
-      dateDebut: lieu.dateDebut,
-      dateFin: lieu.dateFin,
-      prixAdulte: lieu.prixAdulte,
-      prixEnfant: lieu.prixEnfant,
-      latitude: lieu.latitude ? Number(lieu.latitude) : null,
-      longitude: lieu.longitude ? Number(lieu.longitude) : null,
-      publicCible: lieu.publicCible,
-      urlInfos: lieu.urlInfos,
-      infosAcces: lieu.infosAcces,
-      quartier: lieu.quartier?.nom ?? null,
-      categories: lieu.categories.map((c) => c.categorie.nom),
-      photos, // URLs absolues
-      // 1re photo sinon image par défaut
-      coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
-      stats: {
-        avisCount: lieu._count.avis,
-        favorisCount: lieu._count.favoris,
-        avgNote,
-      },
-    };
-
-    return res.status(200).json(payload);
+    return res.status(200).json(toLieuItem(lieu, avgNote));
   } catch (err) {
     console.error('GET /lieux/:id error', err);
     return res.status(500).json({ error: 'Internal Server Error' });
@@ -263,16 +217,6 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 /**
  * POST /lieux
- * Création d'un nouveau lieu.
- *
- * Étapes :
- *   1. upsert du quartier (si pas existant, on le crée)
- *   2. création du lieu
- *   3. rattachement des catégories (créées si absentes)
- *   4. renvoi du lieu complet (quartier, catégories, photos)
- *
- * Retour :
- *   - 201 + JSON du lieu complet créé
  */
 router.post('/', validate(LieuCreateSchema), async (req: Request, res: Response) => {
   try {
@@ -280,7 +224,7 @@ router.post('/', validate(LieuCreateSchema), async (req: Request, res: Response)
       nom,
       description,
       adresse,
-      dateCreation,
+      isPermanent,
       dateDebut,
       dateFin,
       prixAdulte,
@@ -292,163 +236,103 @@ router.post('/', validate(LieuCreateSchema), async (req: Request, res: Response)
       infosAcces,
       quartierNom,
       categories,
+      categoriePrincipale,
     } = req.body;
 
-    // 1) Quartier (créé s'il n'existe pas)
     const quartier = await prisma.quartier.upsert({
       where: { nom: quartierNom },
       update: {},
       create: { nom: quartierNom },
     });
 
-    // 2) Créer le lieu
-    const lieu = await prisma.lieu.create({
+    const created = await prisma.lieu.create({
       data: {
         nom,
         description,
         adresse,
-        dateCreation: new Date(dateCreation),
+        isPermanent: isPermanent ?? false,
         dateDebut: dateDebut ? new Date(dateDebut) : null,
         dateFin: dateFin ? new Date(dateFin) : null,
         prixAdulte: prixAdulte ?? null,
         prixEnfant: prixEnfant ?? null,
-        latitude: latitude ?? null, // Decimal -> string OK
-        longitude: longitude ?? null, // Decimal -> string OK
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
         publicCible: publicCible ?? null,
         urlInfos: urlInfos ?? null,
         infosAcces: infosAcces ?? null,
+
+        // normaliser la categoriePrincipale stockée si fournie
+        // (évite d'avoir "Café" en BDD au lieu de "cafe")
+        categoriePrincipale: categoriePrincipale ? normalize(String(categoriePrincipale)) : null,
+
         quartier: { connect: { id: quartier.id } },
       },
     });
 
-    // 3) Rattacher les catégories (créées si absentes)
     if (Array.isArray(categories) && categories.length) {
       for (const nomCat of categories) {
+        // normaliser les noms de catégories enregistrées en BDD
+        const nomCatNorm = normalize(String(nomCat));
+
         const cat = await prisma.categorie.upsert({
-          where: { nom: nomCat },
+          where: { nom: nomCatNorm },
           update: {},
-          create: { nom: nomCat },
+          create: { nom: nomCatNorm },
         });
+
         await prisma.lieuCategorie.upsert({
-          where: { lieuId_categorieId: { lieuId: lieu.id, categorieId: cat.id } },
+          where: { lieuId_categorieId: { lieuId: created.id, categorieId: cat.id } },
           update: {},
-          create: { lieuId: lieu.id, categorieId: cat.id },
+          create: { lieuId: created.id, categorieId: cat.id },
         });
       }
     }
 
-    // 4) Retourne le lieu complet (avec relations)
     const full = await prisma.lieu.findUnique({
-      where: { id: lieu.id },
+      where: { id: created.id },
       include: {
         quartier: true,
-        categories: { include: { categorie: true } },
         photos: { orderBy: { id: 'asc' } },
+        categories: { include: { categorie: true } },
+        _count: { select: { avis: true, favoris: true } },
       },
     });
 
-    // mise en forme cohérente (URLs absolues + coverUrl)
-    const photos = (full?.photos ?? []).map((p) => ({
-      id: p.id,
-      url: abs(p.url),
-      description: p.description,
-    }));
-
-    const payload = {
-      id: full!.id,
-      nom: full!.nom,
-      description: full!.description,
-      adresse: full!.adresse,
-      // on ne renvoie pas dateCreation
-      dateDebut: full!.dateDebut,
-      dateFin: full!.dateFin,
-      prixAdulte: full!.prixAdulte,
-      prixEnfant: full!.prixEnfant,
-      latitude: full!.latitude ? Number(full!.latitude) : null,
-      longitude: full!.longitude ? Number(full!.longitude) : null,
-      publicCible: full!.publicCible,
-      urlInfos: full!.urlInfos,
-      infosAcces: full!.infosAcces,
-      quartier: full!.quartier?.nom ?? null,
-      categories: full!.categories.map((c) => c.categorie.nom),
-      photos,
-      // 1re photo sinon image par défaut
-      coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
-    };
-
-    res.status(201).json(payload);
+    return res.status(201).json(toLieuItem(full, 0));
   } catch (err) {
     console.error('POST /lieux error', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 /**
  * PUT /lieux/:id
- * Mise à jour d'un lieu existant.
- *
- * Règles :
- *   - si le lieu n'existe pas -> 404
- *   - si quartierNom est fourni -> on l'upsert et on relie le lieu
- *   - si categories est fourni -> on remplace toutes les catégories du lieu
- *
- * Notes :
- *   - on ne push que les champs réellement fournis (pas d'écrasement involontaire)
- *   - les dates et coordonnées sont normalisées
  */
 router.put('/:id', validate(LieuUpdateSchema), async (req: Request, res: Response) => {
   try {
-    // 1. Récupérer / valider l'id du lieu
     const id = Number(req.params.id);
-    if (!Number.isFinite(id)) {
-      return res.status(400).json({ error: 'id invalide' });
-    }
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'id invalide' });
 
-    // 2. Vérifier que le lieu existe
     const existing = await prisma.lieu.findUnique({ where: { id } });
-    if (!existing) {
-      return res.status(404).json({ error: 'Lieu introuvable' });
+    if (!existing) return res.status(404).json({ error: 'Lieu introuvable' });
+
+    const { quartierNom, categories, dateDebut, dateFin, latitude, longitude, ...rest } = req.body;
+
+    const dataToUpdate: any = { ...rest };
+
+    if (dateDebut !== undefined) dataToUpdate.dateDebut = dateDebut ? new Date(dateDebut) : null;
+    if (dateFin !== undefined) dataToUpdate.dateFin = dateFin ? new Date(dateFin) : null;
+
+    if (latitude !== undefined) dataToUpdate.latitude = latitude ?? null;
+    if (longitude !== undefined) dataToUpdate.longitude = longitude ?? null;
+
+    // normaliser categoriePrincipale si elle est envoyée au PUT
+    if (dataToUpdate.categoriePrincipale !== undefined) {
+      dataToUpdate.categoriePrincipale = dataToUpdate.categoriePrincipale
+        ? normalize(String(dataToUpdate.categoriePrincipale))
+        : null;
     }
 
-    // 3. Extraire les champs envoyés par le client
-    const {
-      quartierNom,
-      categories,
-      dateCreation,
-      dateDebut,
-      dateFin,
-      latitude,
-      longitude,
-      ...rest // le reste : nom, description, adresse, etc.
-    } = req.body;
-
-    // 4. Préparer les données de mise à jour
-    //    On ne veut pas écraser avec undefined,
-    //    donc on ne met que ce qui est fourni.
-    const dataToUpdate: any = {
-      ...rest,
-    };
-
-    // Dates
-    if (dateCreation !== undefined) {
-      dataToUpdate.dateCreation = dateCreation ? new Date(dateCreation) : null;
-    }
-    if (dateDebut !== undefined) {
-      dataToUpdate.dateDebut = dateDebut ? new Date(dateDebut) : null;
-    }
-    if (dateFin !== undefined) {
-      dataToUpdate.dateFin = dateFin ? new Date(dateFin) : null;
-    }
-
-    // Coordonnées
-    if (latitude !== undefined) {
-      dataToUpdate.latitude = latitude ?? null;
-    }
-    if (longitude !== undefined) {
-      dataToUpdate.longitude = longitude ?? null;
-    }
-
-    // Quartier
     if (quartierNom !== undefined) {
       const quartier = await prisma.quartier.upsert({
         where: { nom: quartierNom },
@@ -458,141 +342,67 @@ router.put('/:id', validate(LieuUpdateSchema), async (req: Request, res: Respons
       dataToUpdate.quartier = { connect: { id: quartier.id } };
     }
 
-    // 5. Mettre à jour le lieu lui-même
-    await prisma.lieu.update({
-      where: { id },
-      data: dataToUpdate,
-    });
+    await prisma.lieu.update({ where: { id }, data: dataToUpdate });
 
-    // 6. Mettre à jour les catégories si on en a reçu
+    // tags/pivot : remplace toutes les catégories si fourni
     if (categories !== undefined) {
-      // On supprime d'abord toutes les associations existantes
-      await prisma.lieuCategorie.deleteMany({
-        where: { lieuId: id },
-      });
+      await prisma.lieuCategorie.deleteMany({ where: { lieuId: id } });
 
-      // Puis on recrée à partir du nouveau tableau
       for (const nomCat of categories) {
+        // normaliser les catégories
+        const nomCatNorm = normalize(String(nomCat));
+
         const cat = await prisma.categorie.upsert({
-          where: { nom: nomCat },
+          where: { nom: nomCatNorm },
           update: {},
-          create: { nom: nomCat },
+          create: { nom: nomCatNorm },
         });
 
         await prisma.lieuCategorie.create({
-          data: {
-            lieuId: id,
-            categorieId: cat.id,
-          },
+          data: { lieuId: id, categorieId: cat.id },
         });
       }
     }
 
-    // 7. Renvoyer le lieu mis à jour, version complète
     const full = await prisma.lieu.findUnique({
       where: { id },
       include: {
         quartier: true,
-        categories: { include: { categorie: true } },
         photos: { orderBy: { id: 'asc' } },
+        categories: { include: { categorie: true } },
+        _count: { select: { avis: true, favoris: true } },
       },
     });
 
-    const photos = (full?.photos ?? []).map((p) => ({
-      id: p.id,
-      url: abs(p.url),
-      description: p.description,
-    }));
-
-    const payload = {
-      id: full!.id,
-      nom: full!.nom,
-      description: full!.description,
-      adresse: full!.adresse,
-      // pas de dateCreation vers le front
-      dateDebut: full!.dateDebut,
-      dateFin: full!.dateFin,
-      prixAdulte: full!.prixAdulte,
-      prixEnfant: full!.prixEnfant,
-      latitude: full!.latitude ? Number(full!.latitude) : null,
-      longitude: full!.longitude ? Number(full!.longitude) : null,
-      publicCible: full!.publicCible,
-      urlInfos: full!.urlInfos,
-      infosAcces: full!.infosAcces,
-      quartier: full!.quartier?.nom ?? null,
-      categories: full!.categories.map((c) => c.categorie.nom),
-      photos,
-      // 1re photo sinon image par défaut
-      coverUrl: photos[0]?.url ?? abs(DEFAULT_COVER),
-    };
-
-    res.json(payload);
+    return res.status(200).json(toLieuItem(full, 0));
   } catch (err) {
     console.error('PUT /lieux/:id error', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
 /**
  * DELETE /lieux/:id
- * Suppression d'un lieu (admin)
- *
- * Règles :
- *   - si le lieu n'existe pas -> 404
- *   - supprimer les relations dépendantes (avis, favoris, photos, lien catégories)
- *   - puis supprimer le lieu
- *
- * Retour :
- *   - 204 No Content en cas de succès
  */
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    if (!Number.isFinite(id)) {
-      return res.status(400).json({ error: 'id invalide' });
-    }
+    if (!Number.isFinite(id)) return res.status(400).json({ error: 'id invalide' });
 
-    // Vérifier que le lieu existe
-    const existing = await prisma.lieu.findUnique({
-      where: { id },
-      select: { id: true },
-    });
+    const existing = await prisma.lieu.findUnique({ where: { id }, select: { id: true } });
+    if (!existing) return res.status(404).json({ error: 'Lieu introuvable' });
 
-    if (!existing) {
-      return res.status(404).json({ error: 'Lieu introuvable' });
-    }
+    await prisma.avis.deleteMany({ where: { lieuId: id } });
+    await prisma.favori.deleteMany({ where: { lieuId: id } });
+    await prisma.photo.deleteMany({ where: { lieuId: id } });
+    await prisma.lieuCategorie.deleteMany({ where: { lieuId: id } });
 
-    // On supprime dans un ordre logique :
-    // 1. avis
-    await prisma.avis.deleteMany({
-      where: { lieuId: id },
-    });
+    await prisma.lieu.delete({ where: { id } });
 
-    // 2. favoris
-    await prisma.favori.deleteMany({
-      where: { lieuId: id },
-    });
-
-    // 3. photos
-    await prisma.photo.deleteMany({
-      where: { lieuId: id },
-    });
-
-    // 4. relation lieu_categorie
-    await prisma.lieuCategorie.deleteMany({
-      where: { lieuId: id },
-    });
-
-    // 5. supprimer le lieu lui-même
-    await prisma.lieu.delete({
-      where: { id },
-    });
-
-    // 204 = No Content (réponse vide mais succès)
-    res.status(204).send();
+    return res.status(204).send();
   } catch (err) {
     console.error('DELETE /lieux/:id error', err);
-    res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 

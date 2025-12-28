@@ -9,6 +9,8 @@ import { ENV } from './config/env';
 import { AppError } from './errors/AppError'; 
 import { errorHandler } from './middlewares/errorHandler'; 
 import lieuxRouter from './routes/lieux.routes';
+import categoriesRouter from "./routes/categories.routes";
+
 
 const app = express();
 
@@ -98,6 +100,9 @@ app.get('/health', (_req, res) => {
 // Routes métiers
 // app.use(express.json()); // pour lire le body JSON
 app.use('/lieux', lieuxRouter); 
+
+app.use("/categories", categoriesRouter);
+
 
 // Route de test d’erreur volontaire
 // Cette route simule une erreur serveur inattendue (500) pour vérifier la gestion des erreurs (errorHandler).

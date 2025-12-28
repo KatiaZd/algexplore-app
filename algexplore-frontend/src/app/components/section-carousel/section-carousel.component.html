@@ -1,16 +1,37 @@
 <div class="section">
   <div class="header">
     <h2>{{ title }}</h2>
-    <div class="arrows">
-      <button (click)="scrollLeft(carousel)">‹</button>
-      <button (click)="scrollRight(carousel)">›</button>
-    </div>
   </div>
 
-  <div class="carousel" #carousel>
-    <app-lieu-card
-      *ngFor="let lieu of lieux"
-      [lieu]="lieu">
-    </app-lieu-card>
+  <div class="carousel-wrap">
+    <button
+      *ngIf="showArrows"
+      class="arrow overlay left"
+      (click)="scrollLeft(carousel)"
+      [disabled]="!canScrollLeft"
+      aria-label="Défiler à gauche"
+    >
+      ‹
+    </button>
+
+    <div
+      class="carousel"
+      #carousel
+      (scroll)="onCarouselScroll(carousel)"
+      (mouseenter)="updateArrows(carousel)"
+      (touchstart)="updateArrows(carousel)"
+    >
+      <app-lieu-card *ngFor="let lieu of lieux" [lieu]="lieu"></app-lieu-card>
+    </div>
+
+    <button
+      *ngIf="showArrows"
+      class="arrow overlay right"
+      (click)="scrollRight(carousel)"
+      [disabled]="!canScrollRight"
+      aria-label="Défiler à droite"
+    >
+      ›
+    </button>
   </div>
 </div>
