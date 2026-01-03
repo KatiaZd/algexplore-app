@@ -6,6 +6,7 @@ import { MentionsLegalesComponent } from './pages/mentions-legales/mentions-lega
 import { PolitiqueDeConfidentialiteComponent } from './pages/politique-de-confidentialite/politique-de-confidentialite.component';
 import { ContactComponent } from './pages/contact/contact.component';
 import { NotFoundComponent } from './pages/not-found/not-found.component';
+import { FavorisComponent } from './pages/favoris/favoris.component';
 
 
 export const routes: Routes = [
@@ -14,10 +15,16 @@ export const routes: Routes = [
     { path: 'lieux', component: LieuListComponent },
     // page détail publique
     { path: 'lieux/:id', component: LieuDetailComponent },
+    {
+        path: 'login',
+        loadComponent: () =>
+        import('./pages/login/login.component').then((m) => m.LoginComponent),
+    },
 
     { path: 'mentions-legales', component: MentionsLegalesComponent },
     { path: 'politique-de-confidentialite', component: PolitiqueDeConfidentialiteComponent },
     { path: 'contact', component: ContactComponent },
+    { path: 'favoris', component: FavorisComponent },
 
     // { path: '**', redirectTo: '' },
     { path: '**', component: NotFoundComponent },

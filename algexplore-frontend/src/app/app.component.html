@@ -1,15 +1,16 @@
 <header class="header">
   <div class="logo">
     <a routerLink="/">
-    <img src="../assets/logo/logo-algexplore.svg" alt="Logo du site AlgExplore" />
+      <img src="../assets/logo/logo-algexplore.svg" alt="Logo du site AlgExplore" />
     </a>
   </div>
 
   <div class="icons">
-    <button class="icon-btn" aria-label="Favoris"> 
+    <a class="icon-btn" aria-label="Favoris" routerLink="/favoris">
       <img src="../assets/icons/favoris.svg" alt="Icône de favoris" />
-    </button>
-    <button class="icon-btn" aria-label="Compte utilisateur"> 
+    </a>
+
+    <button class="icon-btn" aria-label="Compte utilisateur" (click)="onUserClick()">
       <img src="../assets/icons/user-account.svg" alt="Icône de compte utilisateur" />
     </button>
   </div>

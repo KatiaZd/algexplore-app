@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
-import { RouterOutlet, RouterLink } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { RouterOutlet, RouterLink, Router } from '@angular/router';
+import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -9,5 +10,14 @@ import { RouterOutlet, RouterLink } from '@angular/router';
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  title = 'algexplore-frontend';
+  private router = inject(Router);
+  private authService = inject(AuthService);
+
+  onUserClick(): void {
+    if (this.authService.isAuthenticated) {
+      this.router.navigateByUrl('/favoris');
+    } else {
+      this.router.navigateByUrl('/login');
+    }
+  }
 }
