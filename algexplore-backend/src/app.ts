@@ -1,16 +1,18 @@
-import path from 'path';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet'; // Sécurité des en-têtes HTTP
-import rateLimit from 'express-rate-limit'; // Limiter le nombre de requêtes
-import pinoHttp from 'pino-http';
-import cookieParser from 'cookie-parser';
-import { ENV } from './config/env';
-import { AppError } from './errors/AppError'; 
-import { errorHandler } from './middlewares/errorHandler'; 
-import lieuxRouter from './routes/lieux.routes';
+import path from "path";
+import express from "express";
+import cors from "cors";
+import helmet from "helmet"; // Sécurité des en-têtes HTTP
+import rateLimit from "express-rate-limit"; // Limiter le nombre de requêtes
+import pinoHttp from "pino-http";
+import cookieParser from "cookie-parser";
+import { ENV } from "./config/env";
+import { AppError } from "./errors/AppError";
+import { errorHandler } from "./middlewares/errorHandler";
+import lieuxRouter from "./routes/lieux.routes";
 import categoriesRouter from "./routes/categories.routes";
-
+import authRouter from "./routes/auth.routes";
+import avisRouter from "./routes/avis.routes";
+import favorisRouter from "./routes/favoris.routes";
 
 const app = express();
 
@@ -26,7 +28,7 @@ routes métiers (/lieux)
 /boom
 404
 errorHandler
-*/ 
+*/
 
 // Sécurité & middlewares
 // app.disable('x-powered-by'); // Cache le fait qu’on utilise Express
@@ -45,31 +47,31 @@ app.use(
   cors({
     origin: (origin, cb) => {
       // Autorise Postman/curl (sans origin) et les origines autorisées
-      if (!origin) return cb(null, true); 
+      if (!origin) return cb(null, true);
       if (ENV.CORS_ORIGIN_LIST.includes(origin)) return cb(null, true);
-      return cb(new Error('Origin not allowed by CORS'));
+      return cb(new Error("Origin not allowed by CORS"));
     },
     credentials: true,
   })
 );
 
 // Parsing et middlewares utiles
-app.use(express.json({ limit: '10kb' })); // Lecture du Json + limite de taille
+app.use(express.json({ limit: "10kb" })); // Lecture du Json + limite de taille
 app.use(cookieParser()); // Lecture des cookies
-app.use(pinoHttp());  // Logs des requêtes HTTP
+app.use(pinoHttp()); // Logs des requêtes HTTP
 
 // Rate limiting configuré via ENV
 app.use(
   rateLimit({
     windowMs: ENV.RATE_WINDOW_MIN * 60 * 1000, // Convertit minutes → millisecondes
-    max: ENV.RATE_MAX_REQ,                     // Nombre max de requêtes par IP
+    max: ENV.RATE_MAX_REQ, // Nombre max de requêtes par IP
     standardHeaders: true,
     legacyHeaders: false,
     handler: (_req, res) => {
       res.status(429).json({
         error: {
-          code: 'TOO_MANY_REQUESTS',
-          message: 'Trop de requêtes. Réessaie dans quelques minutes.',
+          code: "TOO_MANY_REQUESTS",
+          message: "Trop de requêtes. Réessaie dans quelques minutes.",
           windowMinutes: ENV.RATE_WINDOW_MIN,
           limit: ENV.RATE_MAX_REQ,
         },
@@ -84,32 +86,37 @@ app.use(
 //   express.static(path.resolve(__dirname, '..', 'public', 'uploads'))
 // );
 app.use(
-  '/uploads',
+  "/uploads",
   (req, res, next) => {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
     next();
   },
-  express.static(path.resolve(__dirname, '..', 'public', 'uploads'))
+  express.static(path.resolve(__dirname, "..", "public", "uploads"))
 );
 
 // Healthcheck minimal (liveness)
-app.get('/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' });
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
 });
 
 // Routes métiers
 // app.use(express.json()); // pour lire le body JSON
-app.use('/lieux', lieuxRouter); 
+app.use("/lieux", lieuxRouter);
 
 app.use("/categories", categoriesRouter);
 
+app.use("/auth", authRouter);
+
+app.use("/avis", avisRouter);
+
+app.use("/favoris", favorisRouter);
 
 // Route de test d’erreur volontaire
 // Cette route simule une erreur serveur inattendue (500) pour vérifier la gestion des erreurs (errorHandler).
 // fonctionne bien/
 // Quand on appelle /boom -> une erreur est lancée -> interceptée par errorHandler
-app.get('/boom', (_req, _res) => {
-  throw new Error('Boom');
+app.get("/boom", (_req, _res) => {
+  throw new Error("Boom");
 });
 
 // Middleware 404

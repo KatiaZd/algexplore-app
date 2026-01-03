@@ -4,7 +4,7 @@
 
 <section class="lieu-detail-page error" *ngIf="hasError && !isLoading">
   <p>Impossible de charger ce lieu.</p>
-  <button (click)="goBack()">Retour</button>
+  <button type="button" (click)="goBack()">Retour</button>
 </section>
 
 <article *ngIf="lieu as l">
@@ -19,11 +19,21 @@
 
       <!-- Icon favori et partager -->
       <div class="hero-actions">
-        <button class="icon-btn" aria-label="Ajouter aux favoris">
-          <img src="assets/icons/favoris.svg" alt="Icône favoris" />
+        <button
+          class="icon-btn"
+          type="button"
+          (click)="toggleFavorite()"
+          [class.is-active]="isFavorite"
+          [disabled]="loadingFav"
+          [attr.aria-label]="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
+        >
+          <img
+            [src]="isFavorite ? 'assets/icons/favoris-filled.svg' : 'assets/icons/favoris.svg'"
+            alt="Icône favoris"
+          />
         </button>
 
-        <button class="icon-btn" aria-label="Partager">
+        <button class="icon-btn" type="button" aria-label="Partager">
           <img src="assets/icons/send.svg" alt="Icône partager" />
         </button>
       </div>
@@ -35,7 +45,10 @@
     <div class="lieu-body__layout">
       <section class="lieu-body__text">
         <p class="paragraph">{{ l.description }}</p>
-        <button>Enregistrer</button>
+
+        <button class="save-btn" type="button" (click)="toggleFavorite()" [disabled]="loadingFav">
+          {{ loadingFav ? '...' : isFavorite ? 'Enregistré' : 'Enregistrer' }}
+        </button>
       </section>
 
       <!-- COLONNE INFOS (aside) -->
@@ -130,7 +143,6 @@
         <section>
           <div>
             <img src="assets/icons/hyperlink.svg" alt="" class="info-icon" />
-            <!-- <a (click)="openExternal(l.urlInfos)">Plus d'infos</a> -->
           </div>
         </section>
 
@@ -139,7 +151,15 @@
         <!-- NOTE -->
         <div class="rating">
           <img src="assets/icons/star.svg" alt="" class="info-icon" />
-          <span class="note">4.5 / 5</span>
+          <button
+            class="note-btn"
+            type="button"
+            (click)="openAvisReadModal()"
+            [attr.aria-label]="'Voir les avis (' + avisList.length + ')'"
+          >
+            <span class="note">{{ avisAverageText }} / 5</span>
+            <span class="note-count" *ngIf="avisList.length">({{ avisList.length }})</span>
+          </button>
         </div>
       </article>
     </div>
@@ -148,17 +168,119 @@
 
 <!-- AVIS -->
 <section class="avis-cta">
-  <img
-    src="assets/icons/messager.svg"
-    alt=""
-    class="avis-cta__icon"
-  />
+  <img src="assets/icons/messager.svg" alt="" class="avis-cta__icon" />
 
   <div class="avis-cta__content">
     <p class="avis-cta__text">Tu as exploré ce lieux ?</p>
 
-    <button class="avis-cta__btn" type="button">
-      <span>Donne ton avis !</span>
+    <button class="avis-cta__btn" type="button" (click)="onClickAddAvis()">
+      <span>{{ myAvis ? 'Modifier mon avis' : 'Donne ton avis !' }}</span>
     </button>
+  </div>
+</section>
+
+<!-- MODALE AVIS -->
+<section
+  class="modal-overlay"
+  *ngIf="isAvisModalOpen"
+  role="button"
+  tabindex="0"
+  aria-label="Fermer la fenêtre"
+  (pointerdown)="closeAvisModal()"
+>
+  <div class="modal" role="dialog" aria-modal="true" (pointerdown)="$event.stopPropagation()">
+    <button class="modal-close" type="button" (click)="closeAvisModal()" aria-label="Fermer">
+      ×
+    </button>
+
+    <h3 class="modal-title">Qu’avez-vous pensé de cette activité ?</h3>
+
+    <!-- Etoiles -->
+    <div class="stars" aria-label="Note">
+      <button
+        type="button"
+        class="star"
+        *ngFor="let n of [1, 2, 3, 4, 5]"
+        (click)="setNote(n)"
+        [class.is-filled]="n <= avisNote"
+        [attr.aria-label]="'Mettre ' + n + ' sur 5'"
+      >
+        ★
+      </button>
+    </div>
+
+    <label class="modal-label" for="avis-commentaire"> Ajouter un commentaire : </label>
+
+    <textarea
+      id="avis-commentaire"
+      class="modal-textarea"
+      [(ngModel)]="avisCommentaire"
+      rows="4"
+      placeholder="Votre commentaire..."
+    ></textarea>
+
+    <button class="modal-submit" type="button" (click)="submitAvis()" [disabled]="avisSubmitting">
+      {{ avisSubmitting ? 'Envoi...' : 'Envoyer' }}
+    </button>
+  </div>
+</section>
+
+<!-- MODALE CONFIRMATION AVIS -->
+<section
+  class="modal-overlay"
+  *ngIf="isAvisSuccessModalOpen"
+  (pointerdown)="closeAvisSuccessModal()"
+>
+  <div class="modal modal--success" (pointerdown)="$event.stopPropagation()">
+    <button class="modal-close" type="button" (click)="closeAvisSuccessModal()" aria-label="Fermer">
+      ×
+    </button>
+
+    <h3 class="modal-title">Merci 🌿</h3>
+    <p class="modal-text">{{ avisSuccessMessage }}</p>
+  </div>
+</section>
+
+<!-- MODALE READ AVIS -->
+<section class="modal-overlay" *ngIf="isAvisReadModalOpen" (pointerdown)="closeAvisReadModal()">
+  <div class="modal modal--read" (pointerdown)="$event.stopPropagation()">
+    <button class="modal-close" type="button" (click)="closeAvisReadModal()" aria-label="Fermer">
+      ×
+    </button>
+
+    <h3 class="modal-title">Avis</h3>
+
+    <!-- Résumé note -->
+    <div class="avis-summary">
+      <div class="stars stars--static" aria-label="Note moyenne">
+        <span
+          class="star"
+          *ngFor="let n of [1, 2, 3, 4, 5]"
+          [class.is-filled]="n <= avisAverageRounded"
+          >★</span
+        >
+      </div>
+      <p class="avis-average">{{ avisAverageText }}</p>
+      <p class="avis-count" *ngIf="avisList.length">{{ avisList.length }} avis</p>
+    </div>
+
+    <!-- Liste des avis -->
+    <div class="avis-list" *ngIf="avisList.length; else noAvis">
+      <article class="avis-item" *ngFor="let a of avisList">
+        <p class="avis-author">{{ a.utilisateur?.prenom }} {{ a.utilisateur?.nom }}</p>
+
+        <div class="stars stars--row" aria-label="Note">
+          <span class="star" *ngFor="let n of [1, 2, 3, 4, 5]" [class.is-filled]="n <= a.note"
+            >★</span
+          >
+        </div>
+
+        <p class="avis-comment" *ngIf="a.commentaire">{{ a.commentaire }}</p>
+      </article>
+    </div>
+
+    <ng-template #noAvis>
+      <p class="avis-empty">Aucun avis pour le moment.</p>
+    </ng-template>
   </div>
 </section>
