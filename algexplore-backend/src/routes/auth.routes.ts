@@ -1,15 +1,16 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
-import { prisma } from '../prisma'; // adapte si ton import Prisma est ailleurs
+import { prisma } from '../prisma';
 import { requireAuth } from '../middlewares/requireAuth';
-
+import { validate } from '../middlewares/validate';
+import { RegisterSchema, LoginSchema } from '../validation/auth.schema';
 
 const router = Router();
+
 router.get('/ping', (_req, res) => {
   res.status(200).json({ ok: true });
 });
-
 
 const signToken = (user: { id: number; email: string; role: string }) => {
   const secret = process.env.JWT_SECRET;
@@ -17,27 +18,18 @@ const signToken = (user: { id: number; email: string; role: string }) => {
 
   const expiresIn = (process.env.JWT_EXPIRES_IN ?? '7d') as jwt.SignOptions['expiresIn'];
 
-  return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
-    secret,
-    { expiresIn }
-  );
+  return jwt.sign({ id: user.id, email: user.email, role: user.role }, secret, { expiresIn });
 };
 
-
 // POST /auth/register
-router.post('/register', async (req, res) => {
+router.post('/register', validate(RegisterSchema), async (req, res) => {
   try {
     const { email, password, nom, prenom } = req.body as {
-      email?: string;
-      password?: string;
-      nom?: string;
-      prenom?: string;
+      email: string;
+      password: string;
+      nom: string;
+      prenom: string;
     };
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email et mot de passe requis' });
-    }
 
     const existing = await prisma.utilisateur.findUnique({ where: { email } });
     if (existing) {
@@ -50,8 +42,8 @@ router.post('/register', async (req, res) => {
       data: {
         email,
         motDePasse: passwordHash,
-        nom: nom ?? '',
-        prenom: prenom ?? '',
+        nom,
+        prenom,
         role: 'user',
         dateInscription: new Date(),
       },
@@ -67,13 +59,9 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', validate(LoginSchema), async (req, res) => {
   try {
-    const { email, password } = req.body as { email?: string; password?: string };
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email et mot de passe requis' });
-    }
+    const { email, password } = req.body as { email: string; password: string };
 
     const user = await prisma.utilisateur.findUnique({
       where: { email },
@@ -91,9 +79,7 @@ router.post('/login', async (req, res) => {
 
     const token = signToken({ id: user.id, email: user.email, role: user.role });
 
-    // On ne renvoie jamais le hash
-    const { motDePasse, ...safeUser } = user;
-
+    const { motDePasse, ...safeUser } = user; // jamais renvoyer le hash
     return res.json({ token, user: safeUser });
   } catch (e) {
     return res.status(500).json({ message: 'Erreur serveur', error: String(e) });

@@ -1,0 +1,113 @@
+.auth {
+  max-width: 520px;
+  margin: 40px auto;
+  padding: 0 16px;
+
+  h1 {
+    text-align: center;
+    margin-bottom: 8px;
+  }
+
+  .hint {
+    text-align: center;
+    opacity: 0.8;
+    margin-bottom: 18px;
+  }
+}
+
+.card {
+  background: #eee;
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+
+  label {
+    font-size: 13px;
+    opacity: 0.8;
+  }
+
+  input {
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+    outline: none;
+  }
+}
+
+.field-error {
+  margin: 0;
+  font-size: 12px;
+  color: #b00020;
+}
+
+.submit-error {
+  color: #b00020;
+  margin: 8px 0 12px;
+}
+
+.password-wrap {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+
+  input {
+    flex: 1;
+  }
+}
+
+.ghost {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 8px 6px;
+}
+
+.pw-hint {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  opacity: 0.8;
+  font-size: 12px;
+}
+
+.btn {
+  width: 100%;
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 12px;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+}
+
+.switch {
+  text-align: center;
+  margin-top: 14px;
+  opacity: 0.85;
+
+  a {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 520px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

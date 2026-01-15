@@ -7,7 +7,8 @@ import { PolitiqueDeConfidentialiteComponent } from './pages/politique-de-confid
 import { ContactComponent } from './pages/contact/contact.component';
 import { NotFoundComponent } from './pages/not-found/not-found.component';
 import { FavorisComponent } from './pages/favoris/favoris.component';
-
+import { authGuard } from './guards/auth.guard';
+import { guestGuard } from './guards/guest.guard';
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -16,13 +17,27 @@ export const routes: Routes = [
     // page détail publique
     { path: 'lieux/:id', component: LieuDetailComponent },
     {
-        path: 'login',
+        path: 'se-connecter',
         loadComponent: () =>
         import('./pages/login/login.component').then((m) => m.LoginComponent),
+        canActivate: [guestGuard],
+    },
+    {
+        path: 'mon-compte',
+        loadComponent: () =>
+        import('./pages/my-account/my-account.component').then((m) => m.MyAccountComponent),
+        canActivate: [authGuard],
+    },
+    {
+        path: 'creer-un-compte',
+        loadComponent: () =>
+        import('./pages/register/register.component').then((m) => m.RegisterComponent),
+        canActivate: [guestGuard],
     },
 
     { path: 'mentions-legales', component: MentionsLegalesComponent },
-    { path: 'politique-de-confidentialite', component: PolitiqueDeConfidentialiteComponent },
+    { path: 'politique-de-confidentialite', 
+      component: PolitiqueDeConfidentialiteComponent },
     { path: 'contact', component: ContactComponent },
     { path: 'favoris', component: FavorisComponent },
 

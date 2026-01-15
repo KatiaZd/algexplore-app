@@ -1,0 +1,117 @@
+<section class="auth">
+  <h1>Créer un compte</h1>
+  <p class="hint">Inscris-toi pour sauvegarder tes favoris et gérer tes avis.</p>
+
+  <form class="card" (ngSubmit)="submit()" novalidate>
+    <div class="row">
+      <div class="field">
+        <label for="prenom">Prénom *</label>
+        <input
+          id="prenom"
+          type="text"
+          name="prenom"
+          [(ngModel)]="form.prenom"
+          (input)="onInput()"
+          (blur)="validateField('prenom')"
+          autocomplete="given-name"
+        />
+        <p class="field-error" *ngIf="shouldShow('prenom') && errors.prenom">
+          {{ errors.prenom }}
+        </p>
+      </div>
+
+      <div class="field">
+        <label for="nom">Nom *</label>
+        <input
+          id="nom"
+          type="text"
+          name="nom"
+          [(ngModel)]="form.nom"
+          (input)="onInput()"
+          (blur)="validateField('nom')"
+          autocomplete="family-name"
+        />
+        <p class="field-error" *ngIf="shouldShow('nom') && errors.nom">
+          {{ errors.nom }}
+        </p>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="email">Email *</label>
+      <input
+        id="email"
+        type="email"
+        name="email"
+        [(ngModel)]="form.email"
+        (input)="onInput()"
+        (blur)="validateField('email')"
+        autocomplete="email"
+      />
+      <p class="field-error" *ngIf="shouldShow('email') && errors.email">
+        {{ errors.email }}
+      </p>
+    </div>
+
+    <div class="field">
+      <label for="password">Mot de passe *</label>
+
+      <div class="password-wrap">
+        <input
+          id="password"
+          [type]="showPassword ? 'text' : 'password'"
+          name="password"
+          [(ngModel)]="form.password"
+          (input)="onInput()"
+          (blur)="validateField('password')"
+          autocomplete="new-password"
+        />
+        <button type="button" class="ghost" (click)="toggleShowPassword()">
+          {{ showPassword ? 'Masquer' : 'Afficher' }}
+        </button>
+      </div>
+
+      <p class="field-error" *ngIf="shouldShow('password') && errors.password">
+        {{ errors.password }}
+      </p>
+
+      <ul class="pw-hint">
+        <li>Minimum 8 caractères</li>
+        <li>Au moins 1 majuscule</li>
+        <li>Au moins 1 minuscule</li>
+        <li>Au moins 1 chiffre</li>
+        <li>Au moins 1 symbole</li>
+      </ul>
+    </div>
+
+    <div class="field">
+      <label for="confirmPassword">Confirmer le mot de passe *</label>
+      <input
+        id="confirmPassword"
+        [type]="showPassword ? 'text' : 'password'"
+        name="confirmPassword"
+        [(ngModel)]="form.confirmPassword"
+        (input)="onInput()"
+        (blur)="validateField('confirmPassword')"
+        autocomplete="new-password"
+      />
+      <p
+        class="field-error"
+        *ngIf="shouldShow('confirmPassword') && errors.confirmPassword"
+      >
+        {{ errors.confirmPassword }}
+      </p>
+    </div>
+
+    <p class="submit-error" *ngIf="submitError">{{ submitError }}</p>
+
+    <button class="btn" type="submit" [disabled]="loading">
+      {{ loading ? 'Création…' : 'Créer mon compte' }}
+    </button>
+
+    <p class="switch">
+      Déjà un compte ?
+      <a routerLink="/se-connecter">Se connecter</a>
+    </p>
+  </form>
+</section>
