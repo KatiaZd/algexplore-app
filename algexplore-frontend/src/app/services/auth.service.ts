@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, tap } from 'rxjs';
+import { BehaviorSubject, Observable, catchError, of, tap } from 'rxjs';
 import { API_URL } from '../config/api.config';
 
 export interface User {
@@ -41,7 +41,7 @@ export class AuthService {
     return !!this.token;
   }
 
-  /** Récupérer l'utilisateur courant (snapshot) */
+  /** Snapshot user */
   get currentUser(): User | null {
     return this.userSubject.value;
   }
@@ -52,12 +52,19 @@ export class AuthService {
     else localStorage.removeItem(this.TOKEN_KEY);
   }
 
-  /** Inscription : crée un compte + récupère un token */
+  /** (Optionnel) call au démarrage: si token -> hydrate le user */
+  init(): void {
+    if (this.isAuthenticated) {
+      this.me().subscribe();
+    }
+  }
+
+  /** Inscription */
   register(payload: {
     email: string;
     password: string;
-    nom: string;
-    prenom: string;
+    nom?: string;
+    prenom?: string;
   }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.api}/auth/register`, payload).pipe(
       tap(({ token, user }) => {
@@ -67,7 +74,7 @@ export class AuthService {
     );
   }
 
-  /** Connexion : récupère un token */
+  /** Connexion */
   login(payload: { email: string; password: string }): Observable<AuthResponse> {
     return this.http.post<AuthResponse>(`${this.api}/auth/login`, payload).pipe(
       tap(({ token, user }) => {
@@ -77,11 +84,16 @@ export class AuthService {
     );
   }
 
-  /** Récupère le user connecté via le token (GET /auth/me) */
-  me(): Observable<MeResponse> {
-    return this.http
-      .get<MeResponse>(`${this.api}/auth/me`)
-      .pipe(tap(({ user }) => this.userSubject.next(user)));
+  /** GET /auth/me (protégé) */
+  me(): Observable<MeResponse | null> {
+    return this.http.get<MeResponse>(`${this.api}/auth/me`).pipe(
+      tap(({ user }) => this.userSubject.next(user)),
+      catchError(() => {
+        // token invalide/expiré -> nettoyage
+        this.logout();
+        return of(null);
+      })
+    );
   }
 
   /** Déconnexion */

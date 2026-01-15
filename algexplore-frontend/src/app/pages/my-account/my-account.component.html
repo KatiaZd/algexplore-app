@@ -1,0 +1,109 @@
+<section class="account">
+  <h1>Mon compte</h1>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <ng-container *ngIf="!loadingUser; else userLoading">
+        <div class="user" *ngIf="user; else noUser">
+          <div class="user__name">{{ user.prenom }} {{ user.nom }}</div>
+          <div class="user__email">{{ user.email }}</div>
+        </div>
+      </ng-container>
+
+      <ng-template #userLoading>
+        <p class="muted">Chargement…</p>
+      </ng-template>
+
+      <ng-template #noUser>
+        <p class="muted">Session expirée.</p>
+      </ng-template>
+
+      <nav class="menu">
+        <button class="menu__item is-active" type="button">Mes avis</button>
+        <!-- V1+ : tu ajouteras "Mes favoris" plus tard -->
+        <!-- <button class="menu__item" type="button">Mes favoris</button> -->
+      </nav>
+
+      <button class="logout" type="button" (click)="logout()">Se déconnecter</button>
+    </aside>
+
+    <!-- Content -->
+    <main class="content">
+      <h2>Mes avis</h2>
+      <p class="hint">
+        Retrouve ici tous tes avis. Tu peux les modifier ou les supprimer à tout moment.
+      </p>
+
+      <p class="error" *ngIf="errorAvis">{{ errorAvis }}</p>
+      <p class="muted" *ngIf="loadingAvis">Chargement…</p>
+
+      <section class="avis-list" *ngIf="!loadingAvis">
+        <article class="avis-card" *ngFor="let a of avis">
+          <div class="avis-card__left">
+            <div class="avis-card__title">{{ a.lieu?.nom ?? 'Lieu' }}</div>
+
+            <!-- MODE LECTURE -->
+            <ng-container *ngIf="editingId !== a.id; else editMode">
+              <div class="stars">
+                <span *ngFor="let n of starsArray()">
+                  {{ isStarOn(n, a.note) ? '★' : '☆' }}
+                </span>
+              </div>
+
+              <p class="comment">
+                {{ a.commentaire || '—' }}
+              </p>
+            </ng-container>
+
+            <!-- MODE EDITION -->
+            <ng-template #editMode>
+              <div class="stars edit-stars" aria-label="Note">
+                <button
+                  type="button"
+                  class="star-btn"
+                  *ngFor="let n of starsArray()"
+                  (click)="setEditNote(n)"
+                  [class.is-on]="isStarOn(n, editNote)"
+                  [disabled]="saving"
+                >
+                  ★
+                </button>
+              </div>
+
+              <textarea
+                class="textarea"
+                [(ngModel)]="editCommentaire"
+                rows="3"
+                placeholder="Ton commentaire…"
+                [disabled]="saving"
+              ></textarea>
+            </ng-template>
+          </div>
+
+          <div class="avis-card__actions">
+            <!-- Actions lecture -->
+            <ng-container *ngIf="editingId !== a.id; else editActions">
+              <button class="link" type="button" (click)="startEdit(a)">Modifier</button>
+              <button class="link danger" type="button" (click)="onDeleteAvis(a)">Supprimer</button>
+            </ng-container>
+
+            <!-- Actions édition -->
+            <ng-template #editActions>
+              <button class="link" type="button" (click)="saveEdit(a)" [disabled]="saving">
+                {{ saving ? 'Enregistrement…' : 'Enregistrer' }}
+              </button>
+              <button class="link danger" type="button" (click)="cancelEdit()" [disabled]="saving">
+                Annuler
+              </button>
+            </ng-template>
+          </div>
+        </article>
+
+        <p class="empty" *ngIf="avis.length === 0">
+          Tu n’as pas encore laissé d’avis.
+        </p>
+      </section>
+    </main>
+  </div>
+</section>
