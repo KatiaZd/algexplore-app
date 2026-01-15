@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import * as jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
+
 import { prisma } from '../prisma';
 import { requireAuth } from '../middlewares/requireAuth';
 import { validate } from '../middlewares/validate';
@@ -10,6 +12,35 @@ const router = Router();
 
 router.get('/ping', (_req, res) => {
   res.status(200).json({ ok: true });
+});
+
+/**
+ * Rate limit spécifique pour /auth/login
+ * Objectif: limiter les tentatives de connexion (anti brute-force)
+ */
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 tentatives par IP sur la fenêtre
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    return res.status(429).json({
+      message: 'Trop de tentatives de connexion. Réessaie dans quelques minutes.',
+    });
+  },
+});
+
+// limiter aussi /register (anti spam) 
+const registerLimiter = rateLimit({
+  windowMs: 30 * 60 * 1000, // 30 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (_req, res) => {
+    return res.status(429).json({
+      message: 'Trop de créations de compte. Réessaie dans quelques minutes.',
+    });
+  },
 });
 
 const signToken = (user: { id: number; email: string; role: string }) => {
@@ -22,7 +53,7 @@ const signToken = (user: { id: number; email: string; role: string }) => {
 };
 
 // POST /auth/register
-router.post('/register', validate(RegisterSchema), async (req, res) => {
+router.post('/register', registerLimiter, validate(RegisterSchema), async (req, res) => {
   try {
     const { email, password, nom, prenom } = req.body as {
       email: string;
@@ -59,7 +90,7 @@ router.post('/register', validate(RegisterSchema), async (req, res) => {
 });
 
 // POST /auth/login
-router.post('/login', validate(LoginSchema), async (req, res) => {
+router.post('/login', loginLimiter, validate(LoginSchema), async (req, res) => {
   try {
     const { email, password } = req.body as { email: string; password: string };
 
@@ -68,6 +99,7 @@ router.post('/login', validate(LoginSchema), async (req, res) => {
       select: { id: true, email: true, role: true, motDePasse: true, nom: true, prenom: true, dateInscription: true },
     });
 
+    // Message volontairement identique pour éviter d'exposer si l'email existe
     if (!user) {
       return res.status(401).json({ message: 'Identifiants invalides' });
     }

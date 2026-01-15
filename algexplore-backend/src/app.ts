@@ -15,6 +15,7 @@ import avisRouter from "./routes/avis.routes";
 import favorisRouter from "./routes/favoris.routes";
 
 const app = express();
+app.set('trust proxy', 1);
 
 /*
 Ordre des middlewares:
@@ -31,16 +32,13 @@ errorHandler
 */
 
 // Sécurité & middlewares
-// app.disable('x-powered-by'); // Cache le fait qu’on utilise Express
-// app.use(
-//   helmet({
-//     // On désactive la protection CORP ou on l’assouplit,
-//     // sinon les images ne peuvent pas être chargées depuis Angular (localhost:4200)
-//     crossOriginResourcePolicy: false,
-//     // ou bien :
-//     // crossOriginResourcePolicy: { policy: 'cross-origin' },
-//   })
-// );
+app.disable('x-powered-by'); // Cache le fait qu’on utilise Express
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
+
 
 // CORS : autorise le front Angular si son origine est dans la liste blanche
 app.use(
@@ -80,19 +78,7 @@ app.use(
   })
 );
 
-// Fichiers statiques (img)
-// app.use(
-//   '/uploads',
-//   express.static(path.resolve(__dirname, '..', 'public', 'uploads'))
-// );
-app.use(
-  "/uploads",
-  (req, res, next) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    next();
-  },
-  express.static(path.resolve(__dirname, "..", "public", "uploads"))
-);
+app.use("/uploads", express.static(path.resolve(__dirname, "..", "public", "uploads")));
 
 // Healthcheck minimal (liveness)
 app.get("/health", (_req, res) => {
@@ -110,6 +96,7 @@ app.use("/auth", authRouter);
 app.use("/avis", avisRouter);
 
 app.use("/favoris", favorisRouter);
+
 
 // Route de test d’erreur volontaire
 // Cette route simule une erreur serveur inattendue (500) pour vérifier la gestion des erreurs (errorHandler).
