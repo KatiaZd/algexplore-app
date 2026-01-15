@@ -284,3 +284,10 @@
     </ng-template>
   </div>
 </section>
+
+<div class="auth-hint" *ngIf="authHintMessage">
+  <span>{{ authHintMessage }}</span>
+  <button type="button" class="auth-hint__btn" (click)="goToLoginFromHint()">
+    Se connecter
+  </button>
+</div>
