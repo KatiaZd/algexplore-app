@@ -27,8 +27,7 @@ export class LieuListComponent implements OnInit {
         this.lieux = data;
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Erreur chargement lieux:', err);
+      error: () => {
         this.hasError = true;
         this.isLoading = false;
       }
@@ -38,11 +37,7 @@ export class LieuListComponent implements OnInit {
     this.categoryService.getAll().subscribe({
       next: (cats) => {
         this.categories = cats;
-        console.log('CATEGORIES:', cats);
       },
-      error: (err) => {
-        console.error('Erreur chargement categories:', err);
-      }
     });
   }
 }

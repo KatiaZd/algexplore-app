@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FavorisService, Favori } from '../../services/favoris.service';
 
 @Component({
@@ -11,6 +12,7 @@ import { FavorisService, Favori } from '../../services/favoris.service';
 })
 export class FavorisComponent implements OnInit {
   private favorisService = inject(FavorisService);
+  private router = inject(Router);
 
   favoris: Favori[] = [];
   loading = true;
@@ -19,7 +21,12 @@ export class FavorisComponent implements OnInit {
   ngOnInit(): void {
     this.favorisService.getMine().subscribe({
       next: (res) => {
-        this.favoris = res.favoris;
+        this.favoris = (res.favoris ?? [])
+          .slice()
+          .sort((a, b) =>
+            (a.lieu?.nom ?? '').localeCompare(b.lieu?.nom ?? '', 'fr', { sensitivity: 'base' })
+          );
+
         this.loading = false;
       },
       error: () => {
@@ -29,11 +36,18 @@ export class FavorisComponent implements OnInit {
     });
   }
 
-  remove(lieuId: number) {
+  openLieu(lieuId: number): void {
+    this.router.navigateByUrl(`/lieux/${lieuId}`);
+  }
+
+  remove(lieuId: number): void {
     this.favorisService.toggle(lieuId).subscribe({
       next: () => {
         this.favoris = this.favoris.filter((f) => f.lieuId !== lieuId);
       },
+      error: () => {
+      this.errorMessage = "Impossible de retirer ce favori pour le moment.";
+    }
     });
   }
 }

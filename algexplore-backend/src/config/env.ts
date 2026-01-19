@@ -1,15 +1,3 @@
-// import 'dotenv/config';
-
-// export const ENV = {
-//   NODE_ENV: process.env.NODE_ENV ?? 'development',
-//   PORT: Number(process.env.PORT ?? 3000),
-//   CORS_ORIGIN: process.env.CORS_ORIGIN ?? 'http://localhost:4200'
-// };
-
-
-
-
-// src/config/env.ts
 import 'dotenv/config';
 import { z } from 'zod';
 
@@ -23,6 +11,12 @@ const EnvSchema = z.object({
   // Optionnel (Prisma shadow DB)
   SHADOW_DATABASE_URL: z.string().url().optional(),
 
+  // JWT
+  JWT_SECRET: z.string().min(1, 'JWT_SECRET est requis'),
+
+  // URL publique de l’API 
+  BASE_URL: z.string().url().default('http://localhost:3000'),
+
   // CORS (liste séparée par des virgules)
   CORS_ORIGINS: z.string().default('http://localhost:4200'),
 
@@ -34,17 +28,12 @@ const EnvSchema = z.object({
 const parsed = EnvSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  const issues = parsed.error.issues
-    .map(i => `- ${i.path.join('.')}: ${i.message}`)
-    .join('\n');
-  // Arrêt propre si config invalide
-  console.error('Configuration ENV invalide :\n' + issues);
+  // Arrêt propre si la config est invalide
   process.exit(1);
 }
 
 export const ENV = {
   ...parsed.data,
-  // Normalisation pratique : tableau d’origines
   CORS_ORIGIN_LIST: parsed.data.CORS_ORIGINS.split(',')
     .map(o => o.trim())
     .filter(Boolean),

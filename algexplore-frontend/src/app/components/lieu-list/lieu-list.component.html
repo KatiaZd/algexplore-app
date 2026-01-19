@@ -6,6 +6,10 @@
     </h2>
   </header>
 
+  <p *ngIf="hasError" class="error">
+    Une erreur est survenue lors du chargement des lieux.
+  </p>
+  
   <!-- Chargement -->
   <div *ngIf="isLoading" class="state">Chargement...</div>
 

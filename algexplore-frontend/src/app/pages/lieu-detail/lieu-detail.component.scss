@@ -53,8 +53,6 @@ article {
 .icon-btn {
   width: 50px;
   height: 50px;
-  border-radius: $radius;
-  border: 1px solid $kaki;
   background: rgba(255, 255, 255, 0.75);
   display: inline-flex;
   align-items: center;
@@ -62,6 +60,8 @@ article {
   cursor: pointer;
   padding: 0;
   transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+  border: none;
+
 
   img {
     width: 31px;
@@ -69,29 +69,11 @@ article {
     display: block;
   }
 
-  &:hover {
-    transform: scale(1.04);
-    background: rgba(255, 255, 255, 0.9);
-  }
-
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
     transform: none;
   }
-}
-
-/* état favori actif */
-.icon-btn.is-active {
-  background: rgba(217, 106, 67, 0.15);
-  border-color: rgba(217, 106, 67, 0.6);
-  box-shadow: 0 0 0 3px rgba(217, 106, 67, 0.2);
-}
-
-
-/* optionnel : petit halo actif */
-.icon-btn.is-active {
-  box-shadow: 0 0 0 3px rgba(217, 106, 67, 0.25);
 }
 
 /* Desktop hero */
@@ -286,6 +268,25 @@ article {
   border: 0;
 }
 
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit; // garde ton style actuel
+  cursor: pointer;
+}
+
+.info-row:hover .info-text {
+  text-decoration: underline; // petit feedback hover (optionnel)
+}
+
+.info-icon {
+  width: 18px;
+  height: 18px;
+}
+
+
 /* Rating */
 .rating {
   display: flex;
@@ -376,7 +377,7 @@ article {
 
 .modal {
   width: min(560px, 92vw);
-  background: #fff;
+  background: $white;
   border-radius: 16px;
   padding: 22px;
   position: relative;
@@ -409,6 +410,38 @@ article {
 
 .star.is-filled { opacity: 1; }
 
+.modal-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.stars {
+  margin-bottom: 10px;
+}
+
+.avis-average {
+  text-align: center;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.avis-count {
+  text-align: center;
+  margin-bottom: 50px;
+
+}
+
+.avis-item {
+  border-bottom: 1px solid #eee;
+  padding: 18px 0;
+  margin-bottom: 30px;
+}
+
+.stars--row {
+  justify-content: flex-start;
+}
+
 .modal-textarea {
   width: 100%;
   margin-top: 8px;
@@ -418,6 +451,10 @@ article {
   resize: vertical;
 }
 
+.modal-label{
+  margin-bottom: 17px;
+}
+
 .modal-submit {
   margin-top: 14px;
   width: 100%;
@@ -425,6 +462,8 @@ article {
   border-radius: 10px;
   border: 0;
   cursor: pointer;
+  background-color: $kaki;
+  color: $white;
 }
 
 .note-btn {
@@ -467,3 +506,28 @@ article {
   cursor: pointer;
   font-weight: 600;
 }
+
+// Bouton retour
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-left: 15px;
+
+  .back-icon {
+    width: 16px;
+    height: 16px;
+  }
+    &:hover {
+      opacity: 0.7;
+
+    .back-icon {
+      transform: translateX(-2px);
+    }
+  }
+}
+

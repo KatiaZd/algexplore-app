@@ -1,3 +1,5 @@
+@use '../../../styles/variables' as *;
+
 .login {
   max-width: 420px;
   margin: 40px auto;
@@ -35,11 +37,40 @@ button {
   border-radius: 10px;
   border: none;
   cursor: pointer;
+  background-color: $kaki;
+  color: $white;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover:not(:disabled) {
+    background-color: #5e6233; 
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
+.switch {
+  text-align: center;
+  margin-top: 14px;
+  opacity: 0.85;
+
+  a {
+    text-decoration: underline;
+    color: $kaki;
+  }
+}
 .error {
   margin: 0;
-  color: #b00020;
+  color: $error;
   font-size: 13px;
 }
 
@@ -50,6 +81,7 @@ button {
 
   p {
     margin: 6px 0;
+    font-size: 15px;
   }
 
   a {

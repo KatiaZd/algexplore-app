@@ -1,204 +1,198 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { prisma } from '../prisma';
 import { requireAuth } from '../middlewares/requireAuth';
+import { validate } from '../middlewares/validate';
+import { AppError } from '../errors/AppError';
 
 const router = Router();
+
+/** Helpers */
+function parseId(raw: string): number {
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) throw new AppError(400, 'BAD_REQUEST', 'Identifiant invalide');
+  return n;
+}
+
+/** Schemas */
+const AvisCreateSchema = z.object({
+  lieuId: z.number().int().positive(),
+  note: z.number().int().min(1).max(5),
+  commentaire: z.string().trim().min(1).max(2000).optional(),
+});
+
+const AvisUpdateSchema = z
+  .object({
+    note: z.number().int().min(1).max(5).optional(),
+    commentaire: z.string().trim().min(1).max(2000).optional(),
+  })
+  .refine(data => data.note !== undefined || data.commentaire !== undefined, {
+    message: 'Aucun champ à mettre à jour',
+  });
 
 /**
  * GET /avis/me
  * Protégé : récupérer les avis de l'utilisateur connecté
  */
-router.get('/me', requireAuth, async (req, res) => {
-  const userId = req.user!.id;
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
 
-  const avis = await prisma.avis.findMany({
-    where: { utilisateurId: userId },
-    orderBy: { id: 'desc' },
-    select: {
-      id: true,
-      note: true,
-      commentaire: true,
-      lieuId: true,
-      lieu: { select: { id: true, nom: true } }, // pratique pour l'espace perso
-    },
-  });
+    const avis = await prisma.avis.findMany({
+      where: { utilisateurId: userId },
+      orderBy: { id: 'desc' },
+      select: {
+        id: true,
+        note: true,
+        commentaire: true,
+        lieuId: true,
+        lieu: { select: { id: true, nom: true } },
+      },
+    });
 
-  return res.json({ avis });
+    return res.json({ avis });
+  } catch {
+    return next(new AppError(500, 'INTERNAL_SERVER_ERROR', 'Unexpected error'));
+  }
 });
-
 
 /**
  * GET /avis?lieuId=123
  * Public : liste des avis d'un lieu
  */
-router.get('/', async (req, res) => {
-  const lieuIdRaw = req.query.lieuId as string | undefined;
+router.get('/', async (req, res, next) => {
+  try {
+    const lieuIdRaw = req.query.lieuId;
 
-  if (!lieuIdRaw) {
-    return res.status(400).json({ message: 'lieuId est requis en query param' });
-  }
+    if (typeof lieuIdRaw !== 'string') {
+      return next(new AppError(400, 'BAD_REQUEST', 'lieuId est requis en query param'));
+    }
 
-  const lieuId = Number(lieuIdRaw);
-  if (Number.isNaN(lieuId)) {
-    return res.status(400).json({ message: 'lieuId invalide' });
-  }
+    const lieuId = Number(lieuIdRaw);
+    if (!Number.isInteger(lieuId) || lieuId <= 0) {
+      return next(new AppError(400, 'BAD_REQUEST', 'lieuId invalide'));
+    }
 
-  const avis = await prisma.avis.findMany({
-    where: { lieuId },
-    orderBy: { id: 'desc' },
-    select: {
-      id: true,
-      note: true,
-      commentaire: true,
-      lieuId: true,
-      utilisateurId: true,
-      utilisateur: {
-        select: { id: true, prenom: true, nom: true },
+    const avis = await prisma.avis.findMany({
+      where: { lieuId },
+      orderBy: { id: 'desc' },
+      select: {
+        id: true,
+        note: true,
+        commentaire: true,
+        lieuId: true,
+        utilisateurId: true,
+        utilisateur: { select: { id: true, prenom: true, nom: true } },
       },
-    },
-  });
+    });
 
-  return res.json({ avis });
+    return res.json({ avis });
+  } catch {
+    return next(new AppError(500, 'INTERNAL_SERVER_ERROR', 'Unexpected error'));
+  }
 });
 
 /**
  * POST /avis
- * Protégé : créer un avis (user connecté)
- * body: { lieuId: number, note: number, commentaire?: string }
+ * Protégé : créer un avis
  */
-router.post('/', requireAuth, async (req, res) => {
-  const userId = req.user!.id;
+router.post('/', requireAuth, validate(AvisCreateSchema), async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
 
-  const { lieuId, note, commentaire } = req.body as {
-    lieuId?: number;
-    note?: number;
-    commentaire?: string;
-  };
+    const { lieuId, note, commentaire } = req.body as z.infer<typeof AvisCreateSchema>;
 
-  if (typeof lieuId !== 'number' || Number.isNaN(lieuId)) {
-    return res.status(400).json({ message: 'lieuId est requis et doit être un nombre' });
+    const lieu = await prisma.lieu.findUnique({ where: { id: lieuId }, select: { id: true } });
+    if (!lieu) {
+      return next(new AppError(404, 'NOT_FOUND', 'Lieu introuvable'));
+    }
+
+    const avis = await prisma.avis.create({
+      data: {
+        lieuId,
+        utilisateurId: userId,
+        note,
+        commentaire: commentaire?.trim() ? commentaire.trim() : null,
+      },
+      select: { id: true, note: true, commentaire: true, lieuId: true, utilisateurId: true },
+    });
+
+    return res.status(201).json({ avis });
+  } catch {
+    return next(new AppError(500, 'INTERNAL_SERVER_ERROR', 'Unexpected error'));
   }
-
-  if (typeof note !== 'number' || Number.isNaN(note) || note < 1 || note > 5) {
-    return res.status(400).json({ message: 'note doit être un nombre entre 1 et 5' });
-  }
-
-  const lieu = await prisma.lieu.findUnique({ where: { id: lieuId }, select: { id: true } });
-  if (!lieu) {
-    return res.status(404).json({ message: 'Lieu introuvable' });
-  }
-
-  const avis = await prisma.avis.create({
-    data: {
-      lieuId,
-      utilisateurId: userId,
-      note,
-      commentaire: commentaire?.trim() ? commentaire.trim() : null,
-    },
-    select: {
-      id: true,
-      note: true,
-      commentaire: true,
-      lieuId: true,
-      utilisateurId: true,
-    },
-  });
-
-  return res.status(201).json({ avis });
 });
 
 /**
  * PATCH /avis/:id
  * Protégé : modifier SON avis uniquement
- * body: { note?: number, commentaire?: string }
  */
-router.patch('/:id', requireAuth, async (req, res) => {
-  const userId = req.user!.id;
+router.patch('/:id', requireAuth, validate(AvisUpdateSchema), async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const id = parseId(req.params.id);
 
-  const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ message: 'id avis invalide' });
-  }
+    const existing = await prisma.avis.findUnique({
+      where: { id },
+      select: { id: true, utilisateurId: true },
+    });
 
-  const { note, commentaire } = req.body as {
-    note?: number;
-    commentaire?: string;
-  };
-
-  // Au moins un champ à modifier
-  if (note === undefined && commentaire === undefined) {
-    return res.status(400).json({ message: 'Aucun champ à mettre à jour' });
-  }
-
-  // Validation note si fournie
-  if (note !== undefined) {
-    if (typeof note !== 'number' || Number.isNaN(note) || note < 1 || note > 5) {
-      return res.status(400).json({ message: 'note doit être un nombre entre 1 et 5' });
+    if (!existing) {
+      return next(new AppError(404, 'NOT_FOUND', 'Avis introuvable'));
     }
+
+    if (existing.utilisateurId !== userId) {
+      return next(new AppError(403, 'FORBIDDEN', 'Interdit'));
+    }
+
+    const { note, commentaire } = req.body as z.infer<typeof AvisUpdateSchema>;
+
+    const updated = await prisma.avis.update({
+      where: { id },
+      data: {
+        ...(note !== undefined ? { note } : {}),
+        ...(commentaire !== undefined
+          ? { commentaire: commentaire?.trim() ? commentaire.trim() : null }
+          : {}),
+      },
+      select: { id: true, note: true, commentaire: true, lieuId: true, utilisateurId: true },
+    });
+
+    return res.json({ avis: updated });
+  } catch (err) {
+    // parseId peut throw AppError
+    return next(err instanceof AppError ? err : new AppError(500, 'INTERNAL_SERVER_ERROR', 'Unexpected error'));
   }
-
-  const avis = await prisma.avis.findUnique({
-    where: { id },
-    select: { id: true, utilisateurId: true },
-  });
-
-  if (!avis) {
-    return res.status(404).json({ message: 'Avis introuvable' });
-  }
-
-  if (avis.utilisateurId !== userId) {
-    return res.status(403).json({ message: 'Interdit : vous ne pouvez modifier que vos avis' });
-  }
-
-  const updated = await prisma.avis.update({
-    where: { id },
-    data: {
-      ...(note !== undefined ? { note } : {}),
-      ...(commentaire !== undefined
-        ? { commentaire: commentaire?.trim() ? commentaire.trim() : null }
-        : {}),
-    },
-    select: {
-      id: true,
-      note: true,
-      commentaire: true,
-      lieuId: true,
-      utilisateurId: true,
-    },
-  });
-
-  return res.json({ avis: updated });
 });
-
 
 /**
  * DELETE /avis/:id
  * Protégé : supprimer SON avis uniquement
  */
-router.delete('/:id', requireAuth, async (req, res) => {
-  const userId = req.user!.id;
+router.delete('/:id', requireAuth, async (req, res, next) => {
+  try {
+    const userId = req.user!.id;
+    const id = parseId(req.params.id);
 
-  const id = Number(req.params.id);
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ message: 'id avis invalide' });
+    const existing = await prisma.avis.findUnique({
+      where: { id },
+      select: { id: true, utilisateurId: true },
+    });
+
+    if (!existing) {
+      return next(new AppError(404, 'NOT_FOUND', 'Avis introuvable'));
+    }
+
+    if (existing.utilisateurId !== userId) {
+      return next(new AppError(403, 'FORBIDDEN', 'Interdit'));
+    }
+
+    await prisma.avis.delete({ where: { id } });
+
+    return res.status(204).send();
+  } catch (err) {
+    return next(err instanceof AppError ? err : new AppError(500, 'INTERNAL_SERVER_ERROR', 'Unexpected error'));
   }
-
-  const avis = await prisma.avis.findUnique({
-    where: { id },
-    select: { id: true, utilisateurId: true },
-  });
-
-  if (!avis) {
-    return res.status(404).json({ message: 'Avis introuvable' });
-  }
-
-  if (avis.utilisateurId !== userId) {
-    return res.status(403).json({ message: 'Interdit : vous ne pouvez supprimer que vos avis' });
-  }
-
-  await prisma.avis.delete({ where: { id } });
-
-  return res.status(204).send();
 });
 
 export default router;
