@@ -5,14 +5,30 @@
     {{ errorMessage }}
   </p>
 
-  <div *ngIf="!errorMessage && favoris.length === 0">
+  <p *ngIf="!errorMessage && favoris.length === 0">
     Aucun favori pour le moment.
-  </div>
+  </p>
 
-  <ul *ngIf="favoris.length > 0">
-    <li *ngFor="let f of favoris">
-      {{ f.lieu.nom }}
-      <button (click)="remove(f.lieuId)">Retirer</button>
-    </li>
-  </ul>
+  <div class="grid" *ngIf="!errorMessage && favoris.length > 0">
+    <article
+      class="card"
+      *ngFor="let f of favoris"
+      tabindex="0"
+      role="link"
+      (click)="openLieu(f.lieuId)"
+      (keydown.enter)="openLieu(f.lieuId)"
+      [attr.aria-label]="'Voir le lieu ' + f.lieu.nom"
+    >
+      <h3 class="card__title">{{ f.lieu.nom }}</h3>
+
+      <button
+        type="button"
+        class="card__remove"
+        [attr.aria-label]="'Retirer ' + f.lieu.nom + ' des favoris'"
+        (click)="$event.stopPropagation(); remove(f.lieuId)"
+      >
+        Retirer
+      </button>
+    </article>
+  </div>
 </section>

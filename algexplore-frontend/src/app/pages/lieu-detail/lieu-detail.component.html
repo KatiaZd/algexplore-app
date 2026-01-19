@@ -1,293 +1,310 @@
+<!-- LOADING -->
 <section class="lieu-detail-page" *ngIf="isLoading">
   <p>Chargement...</p>
 </section>
 
-<section class="lieu-detail-page error" *ngIf="hasError && !isLoading">
+<!-- ERROR -->
+<section class="lieu-detail-page error" *ngIf="!isLoading && hasError">
   <p>Impossible de charger ce lieu.</p>
-  <button type="button" (click)="goBack()">Retour</button>
+  <button type="button" (click)="goHome()">Retour</button>
 </section>
 
-<article *ngIf="lieu as l">
-  <!-- HEADER -->
-  <header class="hero">
-    <img [src]="l.coverUrl" [alt]="l.nom" />
+<!-- CONTENT -->
+<section *ngIf="!isLoading && !hasError">
+  <!-- Message UI  -->
+  <p *ngIf="uiMessage" class="ui-message">
+    {{ uiMessage }}
+  </p>
 
-    <div class="hero-text">
-      <!-- Catégorie du lieux -->
-      <h1>{{ l.nom }}</h1>
-      <!-- Date de l'event -->
+  <button class="back-btn" type="button" (click)="goBack()" aria-label="Retour">
+    <img src="assets/icons/back.svg" alt="" aria-hidden="true" class="back-icon" />
+    <span>Retour</span>
+  </button>
 
-      <!-- Icon favori et partager -->
-      <div class="hero-actions">
-        <button
-          class="icon-btn"
-          type="button"
-          (click)="toggleFavorite()"
-          [class.is-active]="isFavorite"
-          [disabled]="loadingFav"
-          [attr.aria-label]="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
-        >
-          <img
-            [src]="isFavorite ? 'assets/icons/favoris-filled.svg' : 'assets/icons/favoris.svg'"
-            alt="Icône favoris"
-          />
-        </button>
+  <article *ngIf="lieu as l">
+    <!-- HEADER -->
+    <header class="hero">
+      <img [src]="l.coverUrl" [alt]="l.nom" />
 
-        <button class="icon-btn" type="button" aria-label="Partager">
-          <img src="assets/icons/send.svg" alt="Icône partager" />
-        </button>
-      </div>
-    </div>
-  </header>
+      <div class="hero-text">
+        <h1>{{ l.nom }}</h1>
 
-  <!-- DESCRIPTION -->
-  <section class="lieu-body" *ngIf="lieu as l">
-    <div class="lieu-body__layout">
-      <section class="lieu-body__text">
-        <p class="paragraph">{{ l.description }}</p>
-
-        <button class="save-btn" type="button" (click)="toggleFavorite()" [disabled]="loadingFav">
-          {{ loadingFav ? '...' : isFavorite ? 'Enregistré' : 'Enregistrer' }}
-        </button>
-      </section>
-
-      <!-- COLONNE INFOS (aside) -->
-      <article class="lieu-body__aside">
-        <h2>{{ l.nom }}</h2>
-
-        <!-- ADRESSE -->
-        <div>
-          <img src="assets/icons/location.svg" alt="" class="info-icon" />
-          <p>{{ l.adresse }}</p>
-        </div>
-
-        <hr />
-
-        <!-- DATES -->
-        <section>
-          <div>
-            <img src="assets/icons/calendrier.svg" alt="" class="info-icon" />
-
-            <!-- Lieu permanent -->
-            <p *ngIf="l.isPermanent">Permanent</p>
-
-            <!-- Lieu avec dates -->
-            <p *ngIf="!l.isPermanent && l.dateDebut && l.dateFin">
-              Du {{ l.dateDebut | date: 'longDate' }} au {{ l.dateFin | date: 'longDate' }}
-            </p>
-
-            <!-- Cas de sécurité : une seule date -->
-            <p *ngIf="!l.isPermanent && l.dateDebut && !l.dateFin">
-              À partir du {{ l.dateDebut | date: 'longDate' }}
-            </p>
-
-            <p *ngIf="!l.isPermanent && !l.dateDebut && l.dateFin">
-              Jusqu'au {{ l.dateFin | date: 'longDate' }}
-            </p>
-          </div>
-        </section>
-
-        <hr />
-
-        <!-- PRIX -->
-        <section>
-          <div class="price-block">
-            <img src="assets/icons/monnaie.svg" alt="" class="info-icon" />
-
-            <div class="price-text">
-              <p>Billet adulte : {{ l.prixAdulte }}</p>
-              <p>Billet enfant : {{ l.prixEnfant }}</p>
-            </div>
-          </div>
-        </section>
-
-        <hr />
-
-        <!-- CARTE -->
-        <div class="map" *ngIf="lieu.latitude && lieu.longitude">
-          <iframe
-            [src]="safeMapUrl"
-            width="100%"
-            height="180"
-            style="border: 0"
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade"
-          >
-          </iframe>
-        </div>
-
-        <!-- COMMENT Y ALLER -->
-        <section *ngIf="l.infosAcces || l.stationBus">
-          <div>
-            <img src="assets/icons/delivery.svg" alt="" class="info-icon" />
-            <p>
-              <ng-container *ngIf="l.stationBus">Bus : {{ l.stationBus }}. </ng-container>
-              {{ l.infosAcces }}
-            </p>
-          </div>
-        </section>
-
-        <hr />
-
-        <!-- PUBLIC -->
-        <section>
-          <div>
-            <img src="assets/icons/group.svg" alt="" class="info-icon" />
-            <p>Tout public</p>
-          </div>
-        </section>
-
-        <hr />
-
-        <!-- LIEN D’INFOS -->
-        <section>
-          <div>
-            <img src="assets/icons/hyperlink.svg" alt="" class="info-icon" />
-          </div>
-        </section>
-
-        <hr />
-
-        <!-- NOTE -->
-        <div class="rating">
-          <img src="assets/icons/star.svg" alt="" class="info-icon" />
+        <div class="hero-actions">
           <button
-            class="note-btn"
+            class="icon-btn"
             type="button"
-            (click)="openAvisReadModal()"
-            [attr.aria-label]="'Voir les avis (' + avisList.length + ')'"
+            (click)="toggleFavorite()"
+            [class.is-active]="isFavorite"
+            [disabled]="loadingFav"
+            [attr.aria-label]="isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'"
           >
-            <span class="note">{{ avisAverageText }} / 5</span>
-            <span class="note-count" *ngIf="avisList.length">({{ avisList.length }})</span>
+            <img
+              [src]="isFavorite ? 'assets/icons/favoris-filled.svg' : 'assets/icons/favoris.svg'"
+              alt=""
+              aria-hidden="true"
+            />
+          </button>
+
+          <button class="icon-btn" type="button" aria-label="Partager">
+            <img src="assets/icons/send.svg" alt="" aria-hidden="true" />
           </button>
         </div>
-      </article>
-    </div>
-  </section>
-</article>
+      </div>
+    </header>
 
-<!-- AVIS -->
-<section class="avis-cta">
-  <img src="assets/icons/messager.svg" alt="" class="avis-cta__icon" />
+    <!-- DESCRIPTION -->
+    <section class="lieu-body">
+      <div class="lieu-body__layout">
+        <section class="lieu-body__text">
+          <p class="paragraph">{{ l.description }}</p>
 
-  <div class="avis-cta__content">
-    <p class="avis-cta__text">Tu as exploré ce lieux ?</p>
+          <button class="save-btn" type="button" (click)="toggleFavorite()" [disabled]="loadingFav">
+            {{ loadingFav ? '...' : isFavorite ? 'Enregistré' : 'Enregistrer' }}
+          </button>
+        </section>
 
-    <button class="avis-cta__btn" type="button" (click)="onClickAddAvis()">
-      <span>{{ myAvis ? 'Modifier mon avis' : 'Donne ton avis !' }}</span>
-    </button>
-  </div>
-</section>
+        <!-- COLONNE INFOS (aside) -->
+        <article class="lieu-body__aside">
+          <h2>{{ l.nom }}</h2>
 
-<!-- MODALE AVIS -->
-<section
-  class="modal-overlay"
-  *ngIf="isAvisModalOpen"
-  role="button"
-  tabindex="0"
-  aria-label="Fermer la fenêtre"
-  (pointerdown)="closeAvisModal()"
->
-  <div class="modal" role="dialog" aria-modal="true" (pointerdown)="$event.stopPropagation()">
-    <button class="modal-close" type="button" (click)="closeAvisModal()" aria-label="Fermer">
-      ×
-    </button>
+          <!-- ADRESSE -->
+          <div>
+            <img src="assets/icons/location.svg" alt="" aria-hidden="true" class="info-icon" />
+            <p>{{ l.adresse }}</p>
+          </div>
 
-    <h3 class="modal-title">Qu’avez-vous pensé de cette activité ?</h3>
+          <hr />
 
-    <!-- Etoiles -->
-    <div class="stars" aria-label="Note">
-      <button
-        type="button"
-        class="star"
-        *ngFor="let n of [1, 2, 3, 4, 5]"
-        (click)="setNote(n)"
-        [class.is-filled]="n <= avisNote"
-        [attr.aria-label]="'Mettre ' + n + ' sur 5'"
-      >
-        ★
+          <!-- DATES -->
+          <section>
+            <div>
+              <img
+                src="assets/icons/calendrier.svg"
+                alt=""
+                aria-hidden="true"
+                class="info-icon"
+              />
+
+              <p *ngIf="l.isPermanent">Permanent</p>
+
+              <p *ngIf="!l.isPermanent && l.dateDebut && l.dateFin">
+                Du {{ l.dateDebut | date: 'longDate' }} au {{ l.dateFin | date: 'longDate' }}
+              </p>
+
+              <p *ngIf="!l.isPermanent && l.dateDebut && !l.dateFin">
+                À partir du {{ l.dateDebut | date: 'longDate' }}
+              </p>
+
+              <p *ngIf="!l.isPermanent && !l.dateDebut && l.dateFin">
+                Jusqu'au {{ l.dateFin | date: 'longDate' }}
+              </p>
+            </div>
+          </section>
+
+          <hr />
+
+          <!-- PRIX -->
+          <section>
+            <div class="price-block">
+              <img src="assets/icons/monnaie.svg" alt="" aria-hidden="true" class="info-icon" />
+
+              <div class="price-text">
+                <p>Billet adulte : {{ l.prixAdulte }}</p>
+                <p>Billet enfant : {{ l.prixEnfant }}</p>
+              </div>
+            </div>
+          </section>
+
+          <hr />
+
+          <!-- CARTE -->
+          <div class="map" *ngIf="safeMapUrl">
+            <iframe
+              [src]="safeMapUrl"
+              width="100%"
+              height="180"
+              style="border: 0"
+              loading="lazy"
+              referrerpolicy="no-referrer-when-downgrade"
+              title="Carte"
+            >
+            </iframe>
+          </div>
+
+          <!-- COMMENT Y ALLER -->
+          <section *ngIf="l.infosAcces || l.stationBus">
+            <div>
+              <img src="assets/icons/delivery.svg" alt="" aria-hidden="true" class="info-icon" />
+              <p>
+                <ng-container *ngIf="l.stationBus">Bus : {{ l.stationBus }}. </ng-container>
+                {{ l.infosAcces }}
+              </p>
+            </div>
+          </section>
+
+          <hr />
+
+          <!-- PUBLIC -->
+          <section>
+            <div>
+              <img src="assets/icons/group.svg" alt="" aria-hidden="true" class="info-icon" />
+              <p>Tout public</p>
+            </div>
+          </section>
+
+          <hr />
+
+          <!-- LIEN D’INFOS -->
+          <section>
+            <a
+              *ngIf="l.urlInfos"
+              class="info-row"
+              [href]="l.urlInfos"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img src="assets/icons/hyperlink.svg" alt="" aria-hidden="true" class="info-icon" />
+              <span class="info-text">Plus d'infos</span>
+            </a>
+          </section>
+
+          <hr />
+
+          <!-- NOTE -->
+          <div class="rating">
+            <img src="assets/icons/star.svg" alt="" aria-hidden="true" class="info-icon" />
+            <button
+              class="note-btn"
+              type="button"
+              (click)="openAvisReadModal()"
+              [attr.aria-label]="'Voir les avis (' + avisList.length + ')'"
+            >
+              <span class="note">{{ avisAverageText }} / 5</span>
+              <span class="note-count" *ngIf="avisList.length">({{ avisList.length }})</span>
+            </button>
+          </div>
+        </article>
+      </div>
+    </section>
+  </article>
+
+  <!-- AVIS CTA -->
+  <section class="avis-cta">
+    <img src="assets/icons/messager.svg" alt="" aria-hidden="true" class="avis-cta__icon" />
+
+    <div class="avis-cta__content">
+      <p class="avis-cta__text">Tu as exploré ce lieux ?</p>
+
+      <button class="avis-cta__btn" type="button" (click)="onClickAddAvis()">
+        <span>{{ myAvis ? 'Modifier mon avis' : 'Donne ton avis !' }}</span>
       </button>
     </div>
+  </section>
 
-    <label class="modal-label" for="avis-commentaire"> Ajouter un commentaire : </label>
+  <!-- MODALES + AUTH HINT -->
 
-    <textarea
-      id="avis-commentaire"
-      class="modal-textarea"
-      [(ngModel)]="avisCommentaire"
-      rows="4"
-      placeholder="Votre commentaire..."
-    ></textarea>
+  <section
+    class="modal-overlay"
+    *ngIf="isAvisModalOpen"
+    role="button"
+    tabindex="0"
+    aria-label="Fermer la fenêtre"
+    (pointerdown)="closeAvisModal()"
+  >
+    <div class="modal" role="dialog" aria-modal="true" (pointerdown)="$event.stopPropagation()">
+      <button class="modal-close" type="button" (click)="closeAvisModal()" aria-label="Fermer">
+        ×
+      </button>
 
-    <button class="modal-submit" type="button" (click)="submitAvis()" [disabled]="avisSubmitting">
-      {{ avisSubmitting ? 'Envoi...' : 'Envoyer' }}
-    </button>
-  </div>
-</section>
+      <h3 class="modal-title">Qu’avez-vous pensé de cette activité ?</h3>
 
-<!-- MODALE CONFIRMATION AVIS -->
-<section
-  class="modal-overlay"
-  *ngIf="isAvisSuccessModalOpen"
-  (pointerdown)="closeAvisSuccessModal()"
->
-  <div class="modal modal--success" (pointerdown)="$event.stopPropagation()">
-    <button class="modal-close" type="button" (click)="closeAvisSuccessModal()" aria-label="Fermer">
-      ×
-    </button>
-
-    <h3 class="modal-title">Merci 🌿</h3>
-    <p class="modal-text">{{ avisSuccessMessage }}</p>
-  </div>
-</section>
-
-<!-- MODALE READ AVIS -->
-<section class="modal-overlay" *ngIf="isAvisReadModalOpen" (pointerdown)="closeAvisReadModal()">
-  <div class="modal modal--read" (pointerdown)="$event.stopPropagation()">
-    <button class="modal-close" type="button" (click)="closeAvisReadModal()" aria-label="Fermer">
-      ×
-    </button>
-
-    <h3 class="modal-title">Avis</h3>
-
-    <!-- Résumé note -->
-    <div class="avis-summary">
-      <div class="stars stars--static" aria-label="Note moyenne">
-        <span
+      <div class="stars" aria-label="Note">
+        <button
+          type="button"
           class="star"
           *ngFor="let n of [1, 2, 3, 4, 5]"
-          [class.is-filled]="n <= avisAverageRounded"
-          >★</span
+          (click)="setNote(n)"
+          [class.is-filled]="n <= avisNote"
+          [attr.aria-label]="'Mettre ' + n + ' sur 5'"
         >
+          ★
+        </button>
       </div>
-      <p class="avis-average">{{ avisAverageText }}</p>
-      <p class="avis-count" *ngIf="avisList.length">{{ avisList.length }} avis</p>
+
+      <label class="modal-label" for="avis-commentaire"> Ajouter un commentaire : </label>
+
+      <textarea
+        id="avis-commentaire"
+        class="modal-textarea"
+        [(ngModel)]="avisCommentaire"
+        rows="4"
+        placeholder="Votre commentaire..."
+      ></textarea>
+
+      <button class="modal-submit" type="button" (click)="submitAvis()" [disabled]="avisSubmitting">
+        {{ avisSubmitting ? 'Envoi...' : 'Envoyer' }}
+      </button>
     </div>
+  </section>
 
-    <!-- Liste des avis -->
-    <div class="avis-list" *ngIf="avisList.length; else noAvis">
-      <article class="avis-item" *ngFor="let a of avisList">
-        <p class="avis-author">{{ a.utilisateur?.prenom }} {{ a.utilisateur?.nom }}</p>
+  <section
+    class="modal-overlay"
+    *ngIf="isAvisSuccessModalOpen"
+    (pointerdown)="closeAvisSuccessModal()"
+  >
+    <div class="modal modal--success" (pointerdown)="$event.stopPropagation()">
+      <button class="modal-close" type="button" (click)="closeAvisSuccessModal()" aria-label="Fermer">
+        ×
+      </button>
 
-        <div class="stars stars--row" aria-label="Note">
-          <span class="star" *ngFor="let n of [1, 2, 3, 4, 5]" [class.is-filled]="n <= a.note"
+      <h3 class="modal-title">Merci !</h3>
+      <p class="modal-text">{{ avisSuccessMessage }}</p>
+    </div>
+  </section>
+
+  <section class="modal-overlay" *ngIf="isAvisReadModalOpen" (pointerdown)="closeAvisReadModal()">
+    <div class="modal modal--read" (pointerdown)="$event.stopPropagation()">
+      <button class="modal-close" type="button" (click)="closeAvisReadModal()" aria-label="Fermer">
+        ×
+      </button>
+
+      <h3 class="modal-title">Avis</h3>
+
+      <div class="avis-summary">
+        <div class="stars stars--static" aria-label="Note moyenne">
+          <span
+            class="star"
+            *ngFor="let n of [1, 2, 3, 4, 5]"
+            [class.is-filled]="n <= avisAverageRounded"
             >★</span
           >
         </div>
+        <p class="avis-average">{{ avisAverageText }}</p>
+        <p class="avis-count" *ngIf="avisList.length">{{ avisList.length }} avis</p>
+      </div>
 
-        <p class="avis-comment" *ngIf="a.commentaire">{{ a.commentaire }}</p>
-      </article>
+      <div class="avis-list" *ngIf="avisList.length; else noAvis">
+        <article class="avis-item" *ngFor="let a of avisList">
+          <p class="avis-author">{{ a.utilisateur?.prenom }} {{ a.utilisateur?.nom }}</p>
+
+          <div class="stars stars--row" aria-label="Note">
+            <span class="star" *ngFor="let n of [1, 2, 3, 4, 5]" [class.is-filled]="n <= a.note"
+              >★</span
+            >
+          </div>
+
+          <p class="avis-comment" *ngIf="a.commentaire">{{ a.commentaire }}</p>
+        </article>
+      </div>
+
+      <ng-template #noAvis>
+        <p class="avis-empty">Aucun avis pour le moment.</p>
+      </ng-template>
     </div>
+  </section>
 
-    <ng-template #noAvis>
-      <p class="avis-empty">Aucun avis pour le moment.</p>
-    </ng-template>
+  <div class="auth-hint" *ngIf="authHintMessage">
+    <span>{{ authHintMessage }}</span>
+    <button type="button" class="auth-hint__btn" (click)="goToLoginFromHint()">Se connecter</button>
   </div>
 </section>
-
-<div class="auth-hint" *ngIf="authHintMessage">
-  <span>{{ authHintMessage }}</span>
-  <button type="button" class="auth-hint__btn" (click)="goToLoginFromHint()">
-    Se connecter
-  </button>
-</div>

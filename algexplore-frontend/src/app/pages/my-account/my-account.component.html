@@ -21,8 +21,6 @@
 
       <nav class="menu">
         <button class="menu__item is-active" type="button">Mes avis</button>
-        <!-- V1+ : tu ajouteras "Mes favoris" plus tard -->
-        <!-- <button class="menu__item" type="button">Mes favoris</button> -->
       </nav>
 
       <button class="logout" type="button" (click)="logout()">Se déconnecter</button>
@@ -35,13 +33,21 @@
         Retrouve ici tous tes avis. Tu peux les modifier ou les supprimer à tout moment.
       </p>
 
-      <p class="error" *ngIf="errorAvis">{{ errorAvis }}</p>
+      <p class="error-message" *ngIf="errorAvis">{{ errorAvis }}</p>
       <p class="muted" *ngIf="loadingAvis">Chargement…</p>
 
       <section class="avis-list" *ngIf="!loadingAvis">
-        <article class="avis-card" *ngFor="let a of avis">
+        <article class="avis-card" *ngFor="let a of avis; trackBy: trackByAvisId">
           <div class="avis-card__left">
-            <div class="avis-card__title">{{ a.lieu?.nom ?? 'Lieu' }}</div>
+            <div class="avis-card__title">
+              <a *ngIf="a.lieu?.id" [routerLink]="['/lieux', a.lieu!.id]" class="avis-card__link">
+                {{ a.lieu!.nom }}
+              </a>
+
+              <span *ngIf="!a.lieu?.id">
+                {{ a.lieu?.nom ?? 'Lieu' }}
+              </span>
+            </div>
 
             <!-- MODE LECTURE -->
             <ng-container *ngIf="editingId !== a.id; else editMode">
@@ -100,9 +106,7 @@
           </div>
         </article>
 
-        <p class="empty" *ngIf="avis.length === 0">
-          Tu n’as pas encore laissé d’avis.
-        </p>
+        <p class="empty" *ngIf="avis.length === 0">Tu n’as pas encore laissé d’avis.</p>
       </section>
     </main>
   </div>

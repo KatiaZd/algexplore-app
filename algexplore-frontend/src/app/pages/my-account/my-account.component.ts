@@ -1,7 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService, User } from '../../services/auth.service';
 import { AvisService, Avis } from '../../services/avis.service';
@@ -9,7 +9,7 @@ import { AvisService, Avis } from '../../services/avis.service';
 @Component({
   selector: 'app-my-account',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './my-account.component.html',
   styleUrl: './my-account.component.scss',
 })
@@ -18,16 +18,16 @@ export class MyAccountComponent implements OnInit {
   private avisService = inject(AvisService);
   private router = inject(Router);
 
-  // --- User ---
+  // ---------- USER ----------
   user: User | null = null;
   loadingUser = true;
 
-  // --- Avis ---
+  // ---------- AVIS ----------
   avis: Avis[] = [];
   loadingAvis = true;
-  errorAvis = '';
+  errorAvis: string | null = null;
 
-  // --- Inline edit state ---
+  // ---------- INLINE EDIT ----------
   editingId: number | null = null;
   editNote = 5;
   editCommentaire = '';
@@ -42,15 +42,20 @@ export class MyAccountComponent implements OnInit {
   private loadUser(): void {
     this.loadingUser = true;
 
-    // ton AuthService.me() renvoie Observable<MeResponse | null>
-    this.auth.me().subscribe((res) => {
-      this.user = res?.user ?? null;
-      this.loadingUser = false;
+    this.auth.me().subscribe({
+      next: (res) => {
+        this.user = res?.user ?? null;
+        this.loadingUser = false;
 
-      // si pas de user (token invalide/expiré) -> redirection
-      if (!this.user) {
+        if (!this.user) {
+          this.router.navigateByUrl('/se-connecter');
+        }
+      },
+      error: () => {
+        this.loadingUser = false;
+        this.user = null;
         this.router.navigateByUrl('/se-connecter');
-      }
+      },
     });
   }
 
@@ -62,26 +67,27 @@ export class MyAccountComponent implements OnInit {
   // ========== AVIS ==========
   loadMyAvis(): void {
     this.loadingAvis = true;
-    this.errorAvis = '';
+    this.errorAvis = null;
 
     this.avisService.getMine().subscribe({
       next: (res) => {
         this.avis = res.avis ?? [];
         this.loadingAvis = false;
       },
-      error: (err) => {
-        this.errorAvis = err?.error?.message ?? 'Impossible de charger tes avis.';
+      error: () => {
+        this.errorAvis = 'Impossible de charger tes avis.';
         this.loadingAvis = false;
       },
     });
   }
 
-  // ========== EDIT INLINE ==========
+  // ========== EDIT ==========
   startEdit(a: Avis): void {
     this.editingId = a.id;
     this.editNote = a.note ?? 5;
     this.editCommentaire = a.commentaire ?? '';
     this.saving = false;
+    this.errorAvis = null;
   }
 
   cancelEdit(): void {
@@ -98,49 +104,47 @@ export class MyAccountComponent implements OnInit {
   saveEdit(a: Avis): void {
     if (this.editingId !== a.id) return;
 
-    const note = this.editNote;
-    const commentaire = (this.editCommentaire ?? '').trim();
-
-    // mini-guard UX
-    if (note < 1 || note > 5) {
-      alert('La note doit être comprise entre 1 et 5.');
+    if (this.editNote < 1 || this.editNote > 5) {
+      this.errorAvis = 'La note doit être comprise entre 1 et 5.';
       return;
     }
 
     this.saving = true;
+    this.errorAvis = null;
 
-    this.avisService.update(a.id, { note, commentaire }).subscribe({
-      next: (res) => {
-        const updated = res.avis;
+    this.avisService
+      .update(a.id, {
+        note: this.editNote,
+        commentaire: this.editCommentaire.trim() || undefined,
+      })
+      .subscribe({
+        next: (res) => {
+          const updated = res.avis;
 
-        // update local
-        this.avis = this.avis.map((x) =>
-          x.id === a.id
-            ? {
-                ...x,
-                note: updated.note,
-                commentaire: updated.commentaire ?? null,
-              }
-            : x
-        );
+          this.avis = this.avis.map((x) =>
+            x.id === a.id
+              ? {
+                  ...x,
+                  note: updated.note,
+                  commentaire: updated.commentaire ?? null,
+                }
+              : x
+          );
 
-        this.saving = false;
-        this.editingId = null;
-      },
-      error: (err) => {
-        this.saving = false;
-        alert(err?.error?.message ?? "Impossible de modifier l'avis.");
-      },
-    });
+          this.saving = false;
+          this.editingId = null;
+        },
+        error: () => {
+          this.saving = false;
+          this.errorAvis = "Impossible de modifier l'avis.";
+        },
+      });
   }
 
   // ========== DELETE ==========
   onDeleteAvis(a: Avis): void {
-    const lieuNom = a.lieu?.nom ?? 'ce lieu';
-    const ok = confirm(`Supprimer ton avis sur "${lieuNom}" ?`);
-    if (!ok) return;
+    this.errorAvis = null;
 
-    // si on supprime l'avis en cours d'édition
     if (this.editingId === a.id) {
       this.cancelEdit();
     }
@@ -149,8 +153,8 @@ export class MyAccountComponent implements OnInit {
       next: () => {
         this.avis = this.avis.filter((x) => x.id !== a.id);
       },
-      error: (err) => {
-        alert(err?.error?.message ?? "Impossible de supprimer l'avis.");
+      error: () => {
+        this.errorAvis = "Impossible de supprimer l'avis.";
       },
     });
   }

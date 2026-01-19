@@ -1,8 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
-
-const API_BASE = 'http://localhost:3000';
+import { API_URL } from '../config/api.config';
 
 /** Réponse paginée renvoyée par l’API */
 interface LieuxApiResponse {
@@ -60,12 +59,10 @@ export interface Lieu {
   type?: string | null;
 }
 
-@Injectable({
-  providedIn: 'root',
-})
+@Injectable({ providedIn: 'root' })
 export class LieuService {
-  private apiUrl = `${API_BASE}/lieux`;
   private http = inject(HttpClient);
+  private readonly apiUrl = `${API_URL}/lieux`;
 
   /**
    * Mapper typé : transforme LieuApi → Lieu (front)
@@ -73,7 +70,6 @@ export class LieuService {
    * - calcule isPermanent si absent
    */
   private mapLieu(api: LieuApi): Lieu {
-
     return {
       id: api.id,
       nom: api.nom,
@@ -93,15 +89,12 @@ export class LieuService {
       categories: api.categories ?? null,
       categoriePrincipale: api.categoriePrincipale ?? null,
       stationBus: api.stationBus ?? null,
-      // L’URL est déjà absolue côté back
-      coverUrl: api.coverUrl ?? null,
+      coverUrl: api.coverUrl ?? null, // déjà absolue côté back
       type: api.type ?? null,
     };
   }
 
-  /**
-   * Récupère la liste complète des lieux (sans filtre)
-   */
+  /** Récupère la liste complète des lieux (sans filtre) */
   getLieux(): Observable<Lieu[]> {
     const params = { page: 1, pageSize: 50 };
     return this.http.get<LieuxApiResponse>(this.apiUrl, { params }).pipe(
@@ -109,13 +102,9 @@ export class LieuService {
     );
   }
 
-  /**
-   * Récupère un lieu par son ID
-   */
+  /** Récupère un lieu par son ID */
   getLieuById(id: number): Observable<Lieu> {
-    return this.http.get<LieuApi>(`${this.apiUrl}/${id}`).pipe(
-      map((apiLieu) => this.mapLieu(apiLieu))
-    );
+    return this.http.get<LieuApi>(`${this.apiUrl}/${id}`).pipe(map((x) => this.mapLieu(x)));
   }
 
   /**

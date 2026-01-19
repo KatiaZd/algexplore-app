@@ -48,7 +48,7 @@ export class RegisterComponent {
   // erreurs par champ (calculées par validateAll)
   errors: FieldErrors = {};
 
-  // ✅ Affichage des erreurs uniquement après interaction (blur) ou submit
+  // Affichage des erreurs uniquement après interaction (blur) ou submit
   submitted = false;
   touched: TouchedMap = {
     prenom: false,
@@ -58,13 +58,13 @@ export class RegisterComponent {
     confirmPassword: false,
   };
 
-  // ✅ Regex
+  // Regex
   private nameRegex = /^[A-Za-zÀ-ÖØ-öø-ÿ' -]{3,}$/;
   private emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   private passwordRegex =
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 
-  /** Recalcule toutes les erreurs (mais ne décide pas quand les afficher) */
+  /** Recalcule toutes les erreurs */
   validateAll(): boolean {
     const e: FieldErrors = {};
 

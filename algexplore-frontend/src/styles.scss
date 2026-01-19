@@ -1,6 +1,5 @@
 @use 'styles/variables' as *;
 
-/* Reset basique */
 *,
 *::before,
 *::after {
@@ -8,4 +7,23 @@
   margin: 0;
   padding: 0;
   font-family: 'Montserrat', sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0; 
+}
+
+app-root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.site-main {
+  flex: 1;
 }

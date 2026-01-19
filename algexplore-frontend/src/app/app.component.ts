@@ -14,7 +14,7 @@ export class AppComponent implements OnInit {
   private authService = inject(AuthService);
 
   ngOnInit(): void {
-    // ✅ Persistance : si un token existe, on recharge l'utilisateur
+    // Persistance : si un token existe, on recharge l'utilisateur
     if (this.authService.isAuthenticated) {
       this.authService.me().subscribe();
     }

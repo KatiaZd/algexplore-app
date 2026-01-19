@@ -18,7 +18,6 @@ export class LieuCardComponent {
   goToDetail(): void {
     // sécurité : si pas d'id, on fait rien
     if (!this.lieu || this.lieu.id === undefined || this.lieu.id === null) {
-      console.warn('[LieuCard] pas did pour navigation', this.lieu);
       return;
     }
 

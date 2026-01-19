@@ -1,4 +1,8 @@
 <section class="hero">
+  <p *ngIf="hasError" class="error-message">
+    Une erreur est survenue. Réessaie plus tard.
+  </p>
+
   <h1>
     AlgExplore : un portail culturel pour explorer Alger avec authenticité, curiosité et envie de
     partage
@@ -18,7 +22,13 @@
         (keyup.enter)="onSearch()"
       />
 
-      <button *ngIf="isSearching" class="clear-btn" (click)="clearSearch()" aria-label="Effacer">
+      <button
+        *ngIf="isSearching"
+        class="clear-btn"
+        type="button"
+        (click)="clearSearch()"
+        aria-label="Effacer"
+      >
         ✕
       </button>
     </div>
@@ -37,8 +47,7 @@
   </div>
 </section>
 
-<section *ngIf="isLoading">Chargement...</section>
-<section *ngIf="hasError && !isLoading">Erreur de chargement des lieux</section>
+<section *ngIf="isLoading && !hasError">Chargement...</section>
 
 <section *ngIf="!isLoading && !hasError">
   <app-section-carousel

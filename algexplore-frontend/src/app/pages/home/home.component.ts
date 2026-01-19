@@ -14,6 +14,7 @@ import { SectionCarouselComponent } from '../../components/section-carousel/sect
 export class HomeComponent implements OnInit {
   lieux: Lieu[] = [];
   sections: { title: string; lieux: Lieu[] }[] = [];
+
   isLoading = true;
   hasError = false;
 
@@ -27,12 +28,10 @@ export class HomeComponent implements OnInit {
   private lieuService = inject(LieuService);
 
   ngOnInit(): void {
-    console.log('HOME ngOnInit');
     this.loadHomeSections();
   }
 
   onTagClick(tag: string): void {
-    console.log('HOME tag clicked:', tag);
     this.searchValue = tag;
     this.onSearch();
   }
@@ -50,37 +49,12 @@ export class HomeComponent implements OnInit {
   }
 
   private loadHomeSections(): void {
-    console.log('HOME loadHomeSections → start');
-
     this.isLoading = true;
     this.hasError = false;
     this.isSearching = false;
 
-    console.log('HOME calling API /lieux');
-
     this.lieuService.getLieux().subscribe({
       next: (data) => {
-        console.log('HOME API /lieux received:', data.length);
-        console.log('HOME first lieu:', data[0]);
-
-        console.log(
-          'HOME categoriePrincipales trouvées (raw):',
-          Array.from(
-            new Set(
-              data
-                .map((l) => (l.categoriePrincipale ?? '').trim().toLowerCase())
-                .filter(Boolean)
-            )
-          ).sort()
-        );
-
-        console.log(
-          'HOME categoriePrincipales trouvées (normalized):',
-          Array.from(
-            new Set(data.map((l) => this.normalizeCat(l.categoriePrincipale)).filter(Boolean))
-          ).sort()
-        );
-
         this.lieux = data;
 
         // 0) "En ce moment" (catégorie virtuelle côté front)
@@ -144,8 +118,6 @@ export class HomeComponent implements OnInit {
           grouped.get(cat)!.push(lieu);
         }
 
-        console.log('HOME grouped keys (normalized):', Array.from(grouped.keys()));
-
         // 3) Sections prioritaires
         const orderedSections = categoryOrder
           .map((key) => ({
@@ -169,15 +141,14 @@ export class HomeComponent implements OnInit {
           ...(autres.length ? [{ title: 'Autres', lieux: autres }] : []),
         ];
 
+        // Fallback si aucune section n’a été construite mais qu’il y a des lieux
         if (this.sections.length === 0 && data.length > 0) {
-          console.warn('HOME fallback → Tous les lieux');
           this.sections = [{ title: 'Tous les lieux', lieux: data }];
         }
 
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Erreur chargement lieux:', err);
+      error: () => {
         this.hasError = true;
         this.isLoading = false;
       },
@@ -188,7 +159,6 @@ export class HomeComponent implements OnInit {
     const q = this.searchValue.trim();
 
     if (!q) {
-      console.log('HOME search empty → reload home');
       this.loadHomeSections();
       return;
     }
@@ -201,13 +171,11 @@ export class HomeComponent implements OnInit {
 
     this.lieuService.getLieuxByQuery(qApi).subscribe({
       next: (data) => {
-        console.log('HOME search results:', data.length);
         this.lieux = data;
         this.sections = [{ title: `Résultats pour "${q}"`, lieux: data }];
         this.isLoading = false;
       },
-      error: (err) => {
-        console.error('Erreur recherche lieux:', err);
+      error: () => {
         this.hasError = true;
         this.isLoading = false;
       },
@@ -215,7 +183,6 @@ export class HomeComponent implements OnInit {
   }
 
   clearSearch(): void {
-    console.log('HOME clearSearch');
     this.searchValue = '';
     this.loadHomeSections();
   }

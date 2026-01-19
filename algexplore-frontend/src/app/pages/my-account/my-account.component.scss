@@ -1,3 +1,5 @@
+@use '../../../styles/variables' as *;
+
 .account {
   max-width: 1100px;
   margin: 40px auto;
@@ -5,7 +7,7 @@
 
   h1 {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 70px;
   }
 }
 
@@ -17,7 +19,7 @@
 }
 
 .sidebar {
-  background: #eee;
+  background: $beige;
   border-radius: 14px;
   padding: 18px;
   display: flex;
@@ -39,6 +41,7 @@
   flex-direction: column;
   gap: 10px;
   margin-top: 6px;
+  background-color: $beige;
 }
 
 .menu__item {
@@ -65,6 +68,8 @@
   padding: 10px 12px;
   border-radius: 10px;
   cursor: pointer;
+  background-color: $kaki;
+  color: $white;
 }
 
 .content {
@@ -81,7 +86,7 @@
 
   .error {
     text-align: center;
-    color: #b00020;
+    color: $error;
     margin-bottom: 12px;
   }
 }
@@ -93,7 +98,7 @@
 }
 
 .avis-card {
-  background: #eee;
+  border: 2px solid $kaki;
   border-radius: 14px;
   padding: 16px;
   display: flex;
@@ -106,6 +111,10 @@
   margin-bottom: 6px;
 }
 
+.avis-card__link{
+  text-decoration: underline;
+  color: inherit;
+}
 .stars {
   font-size: 18px;
   margin: 8px 0 10px;
@@ -165,7 +174,7 @@
 }
 
 .textarea {
-  width: 100%;
+  width: 200%;
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 10px;

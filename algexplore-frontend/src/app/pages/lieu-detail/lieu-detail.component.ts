@@ -1,10 +1,4 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  inject,
-  HostListener,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -26,6 +20,7 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
   lieu: Lieu | null = null;
   isLoading = true;
   hasError = false;
+  uiMessage: string | null = null;
 
   /** iframe OSM sécurisé pour l’embed */
   safeMapUrl: SafeResourceUrl | null = null;
@@ -89,7 +84,7 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
 
     this.lieuService.getLieuById(id).subscribe({
       next: (data) => {
-        // (au cas où ton API renverrait null au lieu de 404)
+        // (au cas où l'API renverrait null au lieu de 404)
         if (!data) {
           this.router.navigateByUrl('/404');
           return;
@@ -113,7 +108,6 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
           return;
         }
 
-        console.error('Erreur chargement du lieu:', err);
         this.hasError = true;
         this.isLoading = false;
       },
@@ -125,6 +119,13 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
   }
 
   // ---------------------- Helpers ----------------------
+
+  private showUiMessage(message: string, duration = 4000): void {
+    this.uiMessage = message;
+    setTimeout(() => {
+      this.uiMessage = null;
+    }, duration);
+  }
 
   private clearAuthTimers(): void {
     if (this.authHintTimer) {
@@ -139,7 +140,6 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
 
   /** Redirige vers la page de connexion en conservant la page actuelle */
   private redirectToLogin(): void {
-    // nettoyage
     this.authHintMessage = null;
     this.clearAuthTimers();
 
@@ -200,8 +200,16 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 
-  goBack(): void {
+  goHome(): void {
     this.router.navigateByUrl('/');
+  }
+
+  goBack(): void {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      this.router.navigateByUrl('/');
+    }
   }
 
   // ---------------------- Favoris ----------------------
@@ -240,7 +248,7 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
       },
       error: () => {
         this.loadingFav = false;
-        alert('Impossible de modifier les favoris.');
+        this.showUiMessage('Impossible de modifier les favoris.');
       },
     });
   }
@@ -265,6 +273,10 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
     this.avisService.getByLieu(this.lieuId).subscribe({
       next: (res) => {
         this.avisList = res.avis ?? [];
+        this.refreshMyAvis();
+      },
+      error: () => {
+        this.avisList = [];
         this.refreshMyAvis();
       },
     });
@@ -347,7 +359,7 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
     }
 
     if (this.avisNote < 1 || this.avisNote > 5) {
-      alert('Choisis une note entre 1 et 5.');
+      this.showUiMessage('Choisis une note entre 1 et 5.');
       return;
     }
 
@@ -356,7 +368,7 @@ export class LieuDetailComponent implements OnInit, OnDestroy {
 
     const fail = () => {
       this.avisSubmitting = false;
-      alert("Impossible d'envoyer ton avis.");
+      this.showUiMessage("Impossible d'envoyer ton avis.");
     };
 
     if (this.editingAvisId) {

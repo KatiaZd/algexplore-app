@@ -12,19 +12,23 @@
 .card {
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 14px;
-  padding: 14px;
-}
-
-.card__top {
+  padding: 16px;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
   align-items: center;
+
+  &:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+  }
 }
 
 .card__title {
   margin: 0;
   font-size: 16px;
+  font-weight: 600;
 }
 
 .card__remove {
@@ -32,9 +36,5 @@
   background: transparent;
   cursor: pointer;
   text-decoration: underline;
-}
-
-.card__meta {
-  margin: 6px 0 0;
-  opacity: 0.8;
+  font-size: 14px;
 }
