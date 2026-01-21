@@ -12,6 +12,11 @@ on:
 jobs:
   backend-tests:
     runs-on: ubuntu-latest
+    
+    env:
+      NODE_ENV: test
+      JWT_SECRET: test-secret
+      DATABASE_URL: postgresql://user:pass@localhost:5432/testdb
 
     steps:
       - name: Checkout repository
