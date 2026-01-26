@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: algexplore
+      POSTGRES_PASSWORD: algexplore
+      POSTGRES_DB: algexplore
+    ports:
+      - "5433:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U algexplore -d algexplore"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  backend:
+    build:
+      context: ./algexplore-backend
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://algexplore:algexplore@db:5432/algexplore
+      JWT_SECRET: super-secret
+      BASE_URL: http://localhost:3000
+      CORS_ORIGINS: http://localhost:4200
+      RATE_WINDOW_MIN: 15
+      RATE_MAX_REQ: 200
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  db_data:
