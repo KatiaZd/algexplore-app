@@ -1,12 +1,29 @@
+# ---------- Build ----------
+FROM node:20-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY prisma ./prisma
+COPY tsconfig*.json ./
+COPY src ./src
+
+RUN npx prisma generate
+RUN npm run build
+
+# ---------- Run ----------
 FROM node:20-alpine
-WORKDIR /usr/src/app
+WORKDIR /app
 
-COPY algexplore-backend/package*.json ./
-RUN npm install
+ENV NODE_ENV=production
 
-COPY algexplore-backend/. .
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma ./prisma
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 
 EXPOSE 3000
-ENV NODE_ENV=development
-
-CMD ["npm", "run", "dev"]
+CMD ["node", "dist/server.js"]
