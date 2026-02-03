@@ -1,13 +1,10 @@
 FROM node:20-alpine
 WORKDIR /usr/src/app
 
-COPY algexplore-frontend/package*.json ./
+COPY package*.json ./
 RUN npm install
 
-COPY algexplore-frontend/. .
+COPY . .
 
 EXPOSE 4200
-ENV CHOKIDAR_USEPOLLING=true
-ENV NG_CLI_ANALYTICS=ci
-
-CMD ["npm", "start"]
+CMD ["npm", "start", "--", "--host", "0.0.0.0"]
