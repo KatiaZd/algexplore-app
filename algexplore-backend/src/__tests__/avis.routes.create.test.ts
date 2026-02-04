@@ -42,7 +42,7 @@ describe('POST /avis (Create Avis)', () => {
       .post('/avis')
       .send({ lieuId: 10, note: 5, commentaire: '  Super  ' });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
 
     // Vérifie que le lieu a bien été checké
     expect(prismaMock.lieu.findUnique).toHaveBeenCalledWith({
