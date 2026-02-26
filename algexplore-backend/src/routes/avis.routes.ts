@@ -8,9 +8,16 @@ import { AppError } from '../errors/AppError';
 const router = Router();
 
 /** Helpers */
-function parseId(raw: string): number {
-  const n = Number(raw);
-  if (!Number.isInteger(n) || n <= 0) throw new AppError(400, 'BAD_REQUEST', 'Identifiant invalide');
+/** Helpers */
+function parseId(raw: string | string[]): number {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+
+  const n = Number(value);
+
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new AppError(400, 'BAD_REQUEST', 'Identifiant invalide');
+  }
+
   return n;
 }
 
