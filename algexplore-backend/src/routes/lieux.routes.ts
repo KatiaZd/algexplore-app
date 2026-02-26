@@ -29,11 +29,15 @@ const normalize = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '');
 
 /** Parse + validate un id numérique positif */
-function parseId(raw: string) {
-  const id = Number(raw);
+function parseId(raw: string | string[]): number {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+
+  const id = Number(value);
+
   if (!Number.isInteger(id) || id <= 0) {
     throw new AppError(400, 'BAD_REQUEST', 'id invalide');
   }
+
   return id;
 }
 
@@ -154,7 +158,7 @@ router.get('/', async (req, res, next) => {
       }),
     ]);
 
-    const lieuIds = lieux.map((l) => l.id);
+    const lieuIds = lieux.map((l: { id: number }) => l.id);
     const notes = lieuIds.length
       ? await prisma.avis.groupBy({
           by: ['lieuId'],
@@ -166,7 +170,7 @@ router.get('/', async (req, res, next) => {
     const avgByLieuId = new Map<number, number>();
     for (const n of notes) avgByLieuId.set(n.lieuId, n._avg.note ?? 0);
 
-    const items = lieux.map((l) => toLieuItem(l, avgByLieuId.get(l.id) ?? 0));
+    const items = lieux.map((l: {id: number}) => toLieuItem(l, avgByLieuId.get(l.id) ?? 0));
 
     return res.json({ page, pageSize, total, items });
   } catch {
